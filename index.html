@@ -62,11 +62,11 @@
       background: var(--primary);
       color: #fff;
     }
-    button:active, .btn:active { opacity: .9; }
+    button:active { opacity: .9; }
     button.secondary { background: #e2e8f0; color: var(--text); }
     button.danger { background: var(--danger); }
     button:disabled { opacity: .5; cursor: not-allowed; }
-    input[type="text"], input[type="password"], input[type="number"], input[type="date"], select {
+    input[type="text"], input[type="password"], input[type="number"], input[type="date"] {
       width: 100%;
       min-height: 48px;
       padding: 10px 12px;
@@ -99,10 +99,11 @@
     .hidden { display: none !important; }
     .error { color: var(--danger); margin-top: 8px; }
     .ok { color: var(--success); margin-top: 8px; }
-    .tabs { display: flex; gap: 6px; margin-bottom: 12px; }
-    .tabs button { flex: 1; margin-top: 0; background: #e2e8f0; color: var(--text); }
+    .tabs { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+    .tabs button { flex: 1; min-width: 70px; margin-top: 0; background: #e2e8f0; color: var(--text); }
     .tabs button.active { background: var(--primary); color: #fff; }
     footer { text-align: center; margin-top: 24px; color: var(--muted); font-size: 0.8rem; }
+    .hint-box { background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 12px; margin-top: 12px; font-size: 0.9rem; }
   </style>
 </head>
 <body>
@@ -119,11 +120,18 @@
 
   <div id="authSection" class="card">
     <div id="loggedOut">
-      <p>Для внесення даних увійдіть токеном GitHub.</p>
-      <label>Токен (fine-grained, Contents: Read and write)</label>
-      <input type="password" id="tokenInput" placeholder="ghp_... або github_pat_..." autocomplete="off">
+      <p>Вхід для вчителя або старости</p>
+      <label>Логін</label>
+      <input type="text" id="loginInput" placeholder="starosta або teacher" autocomplete="username">
+      <label>Пароль</label>
+      <input type="password" id="passInput" placeholder="Пароль" autocomplete="current-password">
       <button id="btnLogin">Увійти</button>
       <p class="error hidden" id="loginError"></p>
+      <div class="hint-box">
+        <strong>Староста:</strong> логін <code>starosta</code>, пароль <code>starosta</code><br>
+        <strong>Вчитель:</strong> логін <code>teacher</code>, пароль <code>teacher</code><br>
+        Паролі можна змінити після входу вчителя.
+      </div>
     </div>
     <div id="loggedIn" class="hidden">
       <p>Ви: <strong id="userLogin"></strong> <span class="role-badge" id="userRole"></span></p>
@@ -136,6 +144,7 @@
       <button type="button" class="active" data-tab="today">Сьогодні</button>
       <button type="button" data-tab="students">Учні</button>
       <button type="button" data-tab="history">Історія</button>
+      <button type="button" data-tab="settings" id="tabSettingsBtn">Налашт.</button>
     </div>
 
     <div id="tab-today" class="card">
@@ -169,6 +178,26 @@
       <button class="secondary" id="btnLoadDate">Відкрити дату</button>
       <div id="histInfo" style="margin-top:12px"></div>
     </div>
+
+    <div id="tab-settings" class="card hidden">
+      <h2>Налаштування (лише вчитель)</h2>
+      <p class="muted">Щоб дані зберігалися в інтернеті, один раз вставте токен GitHub (ваш акаунт teachersergiy-wq, право Contents: Read and write на цей репозиторій).</p>
+      <label>Токен для збереження</label>
+      <input type="password" id="writeTokenInput" placeholder="github_pat_... або ghp_..." autocomplete="off">
+      <button id="btnSaveToken">Зберегти токен на цьому телефоні</button>
+      <p class="ok hidden" id="tokenOk"></p>
+      <p class="error hidden" id="tokenErr"></p>
+      <p class="muted" id="tokenStatus" style="margin-top:8px"></p>
+
+      <h2 style="margin-top:20px">Паролі</h2>
+      <label>Новий пароль вчителя</label>
+      <input type="password" id="newTeacherPass" placeholder="Залиште порожнім, щоб не змінювати">
+      <label>Новий пароль старости</label>
+      <input type="password" id="newStarostaPass" placeholder="Залиште порожнім, щоб не змінювати">
+      <button id="btnSavePasswords">Змінити паролі</button>
+      <p class="ok hidden" id="passOk"></p>
+      <p class="error hidden" id="passErr"></p>
+    </div>
   </div>
 
   <div class="card" id="statsCard">
@@ -176,21 +205,23 @@
     <div id="statsList"></div>
   </div>
 
-  <footer>Дані зберігаються в репозиторії GitHub · без сервера</footer>
+  <footer>Дані в GitHub · вхід логін + пароль</footer>
 
   <script>
   const CFG = {
     owner: "teachersergiy-wq",
     repo: "Grafik_klas",
     file: "data.json",
-    teachers: ["teacher", "teachersergiy-wq"],
-    heads: ["starosta"]
+    defaultPasswords: {
+      teacher: "teacher",
+      starosta: "starosta"
+    }
   };
 
-  let data = { students: [], days: {} };
-  let token = localStorage.getItem("gk_token") || "";
-  let userLogin = "";
-  let role = "viewer";
+  let data = { students: [], days: {}, passwords: null };
+  let token = localStorage.getItem("gk_write_token") || "";
+  let userLogin = localStorage.getItem("gk_login") || "";
+  let role = localStorage.getItem("gk_role") || "viewer";
   let editDate = todayStr();
   let dataSha = null;
 
@@ -215,15 +246,22 @@
   }
 
   function apiUrl(path) {
-    return `https://api.github.com/repos/${CFG.owner}/${CFG.repo}/contents/${path}`;
+    return "https://api.github.com/repos/" + CFG.owner + "/" + CFG.repo + "/contents/" + path;
+  }
+
+  function getPasswords() {
+    const p = data.passwords || {};
+    return {
+      teacher: p.teacher || CFG.defaultPasswords.teacher,
+      starosta: p.starosta || CFG.defaultPasswords.starosta
+    };
   }
 
   async function loadData() {
     try {
-      const r = await fetch(apiUrl(CFG.file) + "?ref=main", {
-        headers: token ? { Authorization: "Bearer " + token } : {}
-      });
-      if (!r.ok) throw new Error("Не вдалося завантажити дані");
+      const headers = token ? { Authorization: "Bearer " + token } : {};
+      const r = await fetch(apiUrl(CFG.file) + "?ref=main", { headers });
+      if (!r.ok) throw new Error("load fail");
       const j = await r.json();
       dataSha = j.sha;
       const text = decodeURIComponent(escape(atob(j.content.replace(/\n/g, ""))));
@@ -231,11 +269,12 @@
       if (!data.students) data.students = [];
       if (!data.days) data.days = {};
     } catch (e) {
-      console.error(e);
       try {
-        const r2 = await fetch(`https://raw.githubusercontent.com/${CFG.owner}/${CFG.repo}/main/${CFG.file}?t=` + Date.now());
+        const r2 = await fetch("https://raw.githubusercontent.com/" + CFG.owner + "/" + CFG.repo + "/main/" + CFG.file + "?t=" + Date.now());
         data = await r2.json();
         dataSha = null;
+        if (!data.students) data.students = [];
+        if (!data.days) data.days = {};
       } catch (e2) {
         data = { students: [], days: {} };
       }
@@ -244,7 +283,7 @@
   }
 
   async function saveData(msg) {
-    if (!token) throw new Error("Немає токена");
+    if (!token) throw new Error("Немає токена збереження. Вчитель має ввести його в «Налашт.»");
     const content = btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2))));
     const body = {
       message: msg || "Оновлення графіка чергування",
@@ -262,40 +301,15 @@
       body: JSON.stringify(body)
     });
     if (!r.ok) {
-      const err = await r.json().catch(() => ({}));
+      const err = await r.json().catch(function () { return {}; });
       throw new Error(err.message || "Помилка збереження");
     }
     const j = await r.json();
     dataSha = j.content.sha;
   }
 
-  async function checkUser() {
-    if (!token) {
-      role = "viewer";
-      userLogin = "";
-      return;
-    }
-    try {
-      const r = await fetch("https://api.github.com/user", {
-        headers: { Authorization: "Bearer " + token }
-      });
-      if (!r.ok) throw new Error("Токен недійсний");
-      const u = await r.json();
-      userLogin = u.login;
-      if ((CFG.teachers || []).includes(userLogin)) role = "teacher";
-      else if ((CFG.heads || []).includes(userLogin)) role = "head";
-      else role = "viewer";
-    } catch (e) {
-      token = "";
-      localStorage.removeItem("gk_token");
-      role = "viewer";
-      userLogin = "";
-      throw e;
-    }
-  }
-
   function studentById(id) {
-    return data.students.find(s => s.id === id);
+    return data.students.find(function (s) { return s.id === id; });
   }
 
   function calcPct(s) {
@@ -304,9 +318,9 @@
   }
 
   function pickDuty(absentIds) {
-    const present = data.students.filter(s => !absentIds.includes(s.id));
+    const present = data.students.filter(function (s) { return absentIds.indexOf(s.id) < 0; });
     if (!present.length) return null;
-    present.sort((a, b) => {
+    present.sort(function (a, b) {
       const pa = calcPct(a), pb = calcPct(b);
       if (Math.abs(pa - pb) > 1e-9) return pa - pb;
       if (a.ch !== b.ch) return a.ch - b.ch;
@@ -317,6 +331,19 @@
 
   function dayRecord(date) {
     return data.days[date] || null;
+  }
+
+  function escapeHtml(s) {
+    const amp = String.fromCharCode(38) + "amp;";
+    const lt = String.fromCharCode(38) + "lt;";
+    const gt = String.fromCharCode(38) + "gt;";
+    const quot = String.fromCharCode(38) + "quot;";
+    return String(s).replace(/&/g, amp).replace(/</g, lt).replace(/>/g, gt).replace(/"/g, quot);
+  }
+
+  function formatDateUk(iso) {
+    const p = iso.split("-");
+    return p[2] + "." + p[1] + "." + p[0];
   }
 
   function renderDuty() {
@@ -331,7 +358,7 @@
     } else {
       const st = studentById(rec.duty);
       dutyEl.textContent = st ? st.name : "id " + rec.duty;
-      const abs = (rec.absent || []).map(id => {
+      const abs = (rec.absent || []).map(function (id) {
         const s = studentById(id);
         return s ? s.name : id;
       });
@@ -339,37 +366,20 @@
     }
   }
 
-  function formatDateUk(iso) {
-    const [y, m, d] = iso.split("-");
-    return `${d}.${m}.${y}`;
-  }
-
   function renderStats() {
     const list = document.getElementById("statsList");
     if (!data.students.length) {
-      list.innerHTML = "<p class='muted'>Учнів ще немає. Додайте їх у вкладці «Учні».</p>";
+      list.innerHTML = "<p class='muted'>Учнів ще немає.</p>";
       return;
     }
-    const sorted = [...data.students].sort((a, b) => a.name.localeCompare(b.name, "uk"));
-    list.innerHTML = sorted.map(s => {
+    const sorted = data.students.slice().sort(function (a, b) {
+      return a.name.localeCompare(b.name, "uk");
+    });
+    list.innerHTML = sorted.map(function (s) {
       const pct = (calcPct(s) * 100).toFixed(1);
-      return `<div class="student-row">
-        <span class="student-name">${escapeHtml(s.name)}</span>
-        <span class="pct">${s.ch}/${s.b} (${pct}%)</span>
-      </div>`;
+      return '<div class="student-row"><span class="student-name">' + escapeHtml(s.name) +
+        '</span><span class="pct">' + s.ch + "/" + s.b + " (" + pct + "%)</span></div>";
     }).join("");
-  }
-
-  function escapeHtml(s) {
-    const amp = String.fromCharCode(38) + "amp;";
-    const lt = String.fromCharCode(38) + "lt;";
-    const gt = String.fromCharCode(38) + "gt;";
-    const quot = String.fromCharCode(38) + "quot;";
-    return String(s)
-      .replace(/&/g, amp)
-      .replace(/</g, lt)
-      .replace(/>/g, gt)
-      .replace(/"/g, quot);
   }
 
   function renderAuth() {
@@ -381,14 +391,17 @@
       document.getElementById("userLogin").textContent = userLogin;
       document.getElementById("userRole").textContent = role === "teacher" ? "класний керівник" : "староста";
       document.getElementById("editorSection").classList.remove("hidden");
+      document.getElementById("tabSettingsBtn").classList.toggle("hidden", role !== "teacher");
     } else {
       out.classList.remove("hidden");
       inn.classList.add("hidden");
       document.getElementById("editorSection").classList.add("hidden");
-      if (userLogin && role === "viewer") {
-        document.getElementById("loginError").textContent = "Цей логін не має прав редагування.";
-        document.getElementById("loginError").classList.remove("hidden");
-      }
+    }
+    const ts = document.getElementById("tokenStatus");
+    if (ts) {
+      ts.textContent = token
+        ? "Токен збереження на цьому телефоні є."
+        : "Токена ще немає — збереження в інтернет не працюватиме, доки вчитель не введе токен.";
     }
   }
 
@@ -408,36 +421,31 @@
     const hint = document.getElementById("timeWindowHint");
     const can = canEditDay(editDate);
     if (role === "head") {
-      if (editDate !== todayStr()) {
-        hint.textContent = "Староста може вносити лише сьогодні.";
-      } else if (!isWeekdayKyiv()) {
-        hint.textContent = "Староста вносить дані лише в будні.";
-      } else if (!isHeadTimeWindow()) {
-        hint.textContent = "Вікно для старости: 8:00–10:40 (Київ). Зараз закрито.";
-      } else if (dayRecord(editDate)) {
-        hint.textContent = "Запис за сьогодні вже є. Змінювати може лише класний керівник.";
-      } else {
-        hint.textContent = "Можна зберегти присутність один раз.";
-      }
+      if (editDate !== todayStr()) hint.textContent = "Староста може вносити лише сьогодні.";
+      else if (!isWeekdayKyiv()) hint.textContent = "Староста вносить дані лише в будні.";
+      else if (!isHeadTimeWindow()) hint.textContent = "Вікно для старости: 8:00–10:40 (Київ). Зараз закрито.";
+      else if (dayRecord(editDate)) hint.textContent = "Запис за сьогодні вже є. Змінювати може лише вчитель.";
+      else hint.textContent = "Можна зберегти присутність один раз.";
     } else {
-      hint.textContent = "Класний керівник може змінювати будь-яку дату.";
+      hint.textContent = "Вчитель може змінювати будь-яку дату.";
     }
 
     const list = document.getElementById("absentList");
     const rec = dayRecord(editDate) || { absent: [], duty: null };
-    const absentSet = new Set(rec.absent || []);
+    const absentSet = {};
+    (rec.absent || []).forEach(function (id) { absentSet[id] = true; });
     if (!data.students.length) {
       list.innerHTML = "<p class='muted'>Спочатку додайте учнів.</p>";
     } else {
-      const sorted = [...data.students].sort((a, b) => a.name.localeCompare(b.name, "uk"));
-      list.innerHTML = sorted.map(s => {
-        const checked = absentSet.has(s.id) ? "checked" : "";
+      const sorted = data.students.slice().sort(function (a, b) {
+        return a.name.localeCompare(b.name, "uk");
+      });
+      list.innerHTML = sorted.map(function (s) {
+        const checked = absentSet[s.id] ? "checked" : "";
         const dis = can ? "" : "disabled";
-        return `<div class="student-row">
-          <input type="checkbox" data-id="${s.id}" ${checked} ${dis}>
-          <span class="student-name">${escapeHtml(s.name)}</span>
-          <span class="pct">${s.ch}/${s.b}</span>
-        </div>`;
+        return '<div class="student-row"><input type="checkbox" data-id="' + s.id + '" ' + checked + " " + dis +
+          '><span class="student-name">' + escapeHtml(s.name) + '</span><span class="pct">' +
+          s.ch + "/" + s.b + "</span></div>";
       }).join("");
     }
 
@@ -449,15 +457,19 @@
     const sm = document.getElementById("studentsManage");
     if (!data.students.length) sm.innerHTML = "<p class='muted'>Порожньо</p>";
     else {
-      sm.innerHTML = data.students
-        .slice()
-        .sort((a, b) => a.name.localeCompare(b.name, "uk"))
-        .map(s => `<div class="student-row">
-          <span class="student-name">${escapeHtml(s.name)} <span class="muted">(id ${s.id})</span></span>
-          ${role === "teacher" ? `<button type="button" class="secondary" style="width:auto;min-height:36px;padding:6px 10px;margin:0" data-del="${s.id}">Видалити</button>` : ""}
-        </div>`).join("");
-      sm.querySelectorAll("[data-del]").forEach(btn => {
-        btn.onclick = () => deleteStudent(btn.dataset.del);
+      sm.innerHTML = data.students.slice().sort(function (a, b) {
+        return a.name.localeCompare(b.name, "uk");
+      }).map(function (s) {
+        return '<div class="student-row"><span class="student-name">' + escapeHtml(s.name) +
+          ' <span class="muted">(id ' + s.id + ")</span></span>" +
+          (role === "teacher"
+            ? '<button type="button" class="secondary" style="width:auto;min-height:36px;padding:6px 10px;margin:0" data-del="' +
+              s.id + '">Видалити</button>'
+            : "") +
+          "</div>";
+      }).join("");
+      sm.querySelectorAll("[data-del]").forEach(function (btn) {
+        btn.onclick = function () { deleteStudent(btn.getAttribute("data-del")); };
       });
     }
 
@@ -471,49 +483,117 @@
     if (role === "teacher" || role === "head") renderEditor();
   }
 
-  document.getElementById("btnLogin").onclick = async () => {
-    const t = document.getElementById("tokenInput").value.trim();
+  function applyDay(rec) {
+    const absent = {};
+    (rec.absent || []).forEach(function (id) { absent[id] = true; });
+    data.students.forEach(function (s) {
+      if (!absent[s.id]) s.b = (s.b || 0) + 1;
+      if (s.id === rec.duty) s.ch = (s.ch || 0) + 1;
+    });
+  }
+
+  function reverseDay(rec) {
+    const absent = {};
+    (rec.absent || []).forEach(function (id) { absent[id] = true; });
+    data.students.forEach(function (s) {
+      if (!absent[s.id]) s.b = Math.max(0, (s.b || 0) - 1);
+      if (s.id === rec.duty) s.ch = Math.max(0, (s.ch || 0) - 1);
+    });
+  }
+
+  document.getElementById("btnLogin").onclick = function () {
+    const login = document.getElementById("loginInput").value.trim().toLowerCase();
+    const pass = document.getElementById("passInput").value;
     const err = document.getElementById("loginError");
     err.classList.add("hidden");
-    if (!t) { err.textContent = "Введіть токен"; err.classList.remove("hidden"); return; }
-    token = t;
-    try {
-      await checkUser();
-      if (role === "viewer") {
-        err.textContent = "Акаунт «" + userLogin + "» не в списку вчителя/старости. Дозволені: " +
-          (CFG.teachers || []).concat(CFG.heads || []).join(", ");
-        err.classList.remove("hidden");
-        token = "";
-        return;
-      }
-      localStorage.setItem("gk_token", token);
-      await loadData();
-    } catch (e) {
-      err.textContent = e.message || "Помилка входу";
+    const pw = getPasswords();
+    if (login === "teacher" && pass === pw.teacher) {
+      role = "teacher";
+      userLogin = "teacher";
+    } else if (login === "starosta" && pass === pw.starosta) {
+      role = "head";
+      userLogin = "starosta";
+    } else {
+      err.textContent = "Невірний логін або пароль.";
       err.classList.remove("hidden");
-      token = "";
+      return;
     }
-  };
-
-  document.getElementById("btnLogout").onclick = () => {
-    token = "";
-    userLogin = "";
-    role = "viewer";
-    localStorage.removeItem("gk_token");
+    localStorage.setItem("gk_login", userLogin);
+    localStorage.setItem("gk_role", role);
+    document.getElementById("passInput").value = "";
     renderAll();
   };
 
-  document.querySelectorAll(".tabs button").forEach(btn => {
-    btn.onclick = () => {
-      document.querySelectorAll(".tabs button").forEach(b => b.classList.remove("active"));
+  document.getElementById("btnLogout").onclick = function () {
+    userLogin = "";
+    role = "viewer";
+    localStorage.removeItem("gk_login");
+    localStorage.removeItem("gk_role");
+    renderAll();
+  };
+
+  document.querySelectorAll(".tabs button").forEach(function (btn) {
+    btn.onclick = function () {
+      document.querySelectorAll(".tabs button").forEach(function (b) { b.classList.remove("active"); });
       btn.classList.add("active");
-      ["today", "students", "history"].forEach(t => {
-        document.getElementById("tab-" + t).classList.toggle("hidden", btn.dataset.tab !== t);
+      ["today", "students", "history", "settings"].forEach(function (t) {
+        const el = document.getElementById("tab-" + t);
+        if (el) el.classList.toggle("hidden", btn.getAttribute("data-tab") !== t);
       });
     };
   });
 
-  document.getElementById("btnSaveDay").onclick = async () => {
+  document.getElementById("btnSaveToken").onclick = function () {
+    const t = document.getElementById("writeTokenInput").value.trim();
+    const ok = document.getElementById("tokenOk");
+    const er = document.getElementById("tokenErr");
+    ok.classList.add("hidden");
+    er.classList.add("hidden");
+    if (!t) {
+      er.textContent = "Вставте токен";
+      er.classList.remove("hidden");
+      return;
+    }
+    token = t;
+    localStorage.setItem("gk_write_token", token);
+    ok.textContent = "Токен збережено на цьому телефоні.";
+    ok.classList.remove("hidden");
+    document.getElementById("writeTokenInput").value = "";
+    renderAuth();
+  };
+
+  document.getElementById("btnSavePasswords").onclick = async function () {
+    if (role !== "teacher") return;
+    const tp = document.getElementById("newTeacherPass").value;
+    const sp = document.getElementById("newStarostaPass").value;
+    const ok = document.getElementById("passOk");
+    const er = document.getElementById("passErr");
+    ok.classList.add("hidden");
+    er.classList.add("hidden");
+    if (!tp && !sp) {
+      er.textContent = "Введіть хоча б один новий пароль";
+      er.classList.remove("hidden");
+      return;
+    }
+    if (!data.passwords) data.passwords = {};
+    const cur = getPasswords();
+    if (tp) data.passwords.teacher = tp;
+    else data.passwords.teacher = cur.teacher;
+    if (sp) data.passwords.starosta = sp;
+    else data.passwords.starosta = cur.starosta;
+    try {
+      await saveData("Змінено паролі входу");
+      ok.textContent = "Паролі оновлено.";
+      ok.classList.remove("hidden");
+      document.getElementById("newTeacherPass").value = "";
+      document.getElementById("newStarostaPass").value = "";
+    } catch (e) {
+      er.textContent = e.message;
+      er.classList.remove("hidden");
+    }
+  };
+
+  document.getElementById("btnSaveDay").onclick = async function () {
     const err = document.getElementById("saveError");
     const ok = document.getElementById("saveOk");
     err.classList.add("hidden");
@@ -524,8 +604,8 @@
       return;
     }
     const absent = [];
-    document.querySelectorAll("#absentList input[type=checkbox]").forEach(cb => {
-      if (cb.checked) absent.push(cb.dataset.id);
+    document.querySelectorAll("#absentList input[type=checkbox]").forEach(function (cb) {
+      if (cb.checked) absent.push(cb.getAttribute("data-id"));
     });
     const duty = pickDuty(absent);
     if (!duty) {
@@ -535,38 +615,26 @@
     }
     const prev = dayRecord(editDate);
     if (prev) reverseDay(prev);
-    data.days[editDate] = { absent, duty };
+    data.days[editDate] = { absent: absent, duty: duty };
     applyDay(data.days[editDate]);
     try {
-      await saveData(`Присутність і черговий за ${editDate}`);
-      ok.textContent = "Збережено. Черговий: " + (studentById(duty)?.name || duty);
+      await saveData("Присутність і черговий за " + editDate);
+      const st = studentById(duty);
+      ok.textContent = "Збережено. Черговий: " + (st ? st.name : duty);
       ok.classList.remove("hidden");
       renderAll();
     } catch (e) {
       reverseDay(data.days[editDate]);
-      if (prev) { data.days[editDate] = prev; applyDay(prev); }
-      else delete data.days[editDate];
+      if (prev) {
+        data.days[editDate] = prev;
+        applyDay(prev);
+      } else delete data.days[editDate];
       err.textContent = e.message;
       err.classList.remove("hidden");
     }
   };
 
-  function applyDay(rec) {
-    const absent = new Set(rec.absent || []);
-    data.students.forEach(s => {
-      if (!absent.has(s.id)) s.b = (s.b || 0) + 1;
-      if (s.id === rec.duty) s.ch = (s.ch || 0) + 1;
-    });
-  }
-  function reverseDay(rec) {
-    const absent = new Set(rec.absent || []);
-    data.students.forEach(s => {
-      if (!absent.has(s.id)) s.b = Math.max(0, (s.b || 0) - 1);
-      if (s.id === rec.duty) s.ch = Math.max(0, (s.ch || 0) - 1);
-    });
-  }
-
-  document.getElementById("btnClearDay").onclick = async () => {
+  document.getElementById("btnClearDay").onclick = async function () {
     if (role !== "teacher") return;
     const rec = dayRecord(editDate);
     if (!rec) return;
@@ -574,7 +642,7 @@
     reverseDay(rec);
     delete data.days[editDate];
     try {
-      await saveData(`Скасовано запис за ${editDate}`);
+      await saveData("Скасовано запис за " + editDate);
       renderAll();
     } catch (e) {
       applyDay(rec);
@@ -583,16 +651,20 @@
     }
   };
 
-  document.getElementById("btnAddStudent").onclick = async () => {
+  document.getElementById("btnAddStudent").onclick = async function () {
     if (role !== "teacher" && role !== "head") return;
     const name = document.getElementById("newName").value.trim();
     const b = parseInt(document.getElementById("newB").value, 10) || 0;
     const ch = parseInt(document.getElementById("newCh").value, 10) || 0;
     const err = document.getElementById("studError");
     err.classList.add("hidden");
-    if (!name) { err.textContent = "Вкажіть ім’я"; err.classList.remove("hidden"); return; }
+    if (!name) {
+      err.textContent = "Вкажіть ім’я";
+      err.classList.remove("hidden");
+      return;
+    }
     const id = String(Date.now());
-    data.students.push({ id, name, b, ch });
+    data.students.push({ id: id, name: name, b: b, ch: ch });
     try {
       await saveData("Додано учня " + name);
       document.getElementById("newName").value = "";
@@ -607,7 +679,7 @@
   async function deleteStudent(id) {
     if (role !== "teacher") return;
     if (!confirm("Видалити учня?")) return;
-    const idx = data.students.findIndex(s => s.id === id);
+    const idx = data.students.findIndex(function (s) { return s.id === id; });
     if (idx < 0) return;
     const removed = data.students.splice(idx, 1)[0];
     try {
@@ -619,7 +691,7 @@
     }
   }
 
-  document.getElementById("btnLoadDate").onclick = () => {
+  document.getElementById("btnLoadDate").onclick = function () {
     const d = document.getElementById("histDate").value;
     if (!d) return;
     editDate = d;
@@ -630,17 +702,16 @@
     if (!rec) info.innerHTML = "<p class='muted'>Записів немає</p>";
     else {
       const st = studentById(rec.duty);
-      info.innerHTML = `<p>Черговий: <strong>${st ? escapeHtml(st.name) : rec.duty}</strong></p>
-        <p class="muted">Відсутні: ${(rec.absent||[]).map(id => studentById(id)?.name || id).join(", ") || "—"}</p>`;
+      info.innerHTML = "<p>Черговий: <strong>" + (st ? escapeHtml(st.name) : rec.duty) +
+        '</strong></p><p class="muted">Відсутні: ' +
+        ((rec.absent || []).map(function (id) {
+          const s = studentById(id);
+          return s ? s.name : id;
+        }).join(", ") || "—") + "</p>";
     }
   };
 
-  (async () => {
-    if (token) {
-      try { await checkUser(); } catch (e) { token = ""; }
-    }
-    await loadData();
-  })();
+  loadData();
   </script>
 </body>
 </html>
