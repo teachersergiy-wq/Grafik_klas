@@ -51,5 +51,9 @@
       ],
       "duty": "1793661552424"
     }
+  },
+  "passwords": {
+    "teacher": "5500",
+    "starosta": "starosta"
   }
 }
