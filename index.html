@@ -184,8 +184,8 @@
     owner: "teachersergiy-wq",
     repo: "Grafik_klas",
     file: "data.json",
-    teacher: "teachersergiy-wq",
-    head: "" // логін старости — уточнити
+    teacher: "teacher",
+    head: "starosta"
   };
 
   let data = { students: [], days: {} };
@@ -362,7 +362,11 @@
   }
 
   function escapeHtml(s) {
-    return String(s).replace(/&/g,"&").replace(/</g,"<").replace(/>/g,">").replace(/"/g,""");
+    return String(s)
+      .replace(/&/g, "&")
+      .replace(/</g, "<")
+      .replace(/>/g, ">")
+      .replace(/"/g, """);
   }
 
   function renderAuth() {
