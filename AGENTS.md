@@ -13,8 +13,8 @@ Grafik_klas — графік чергування учнів 7 класу
 * owner: teachersergiy-wq
 * repo: Grafik_klas
 * file: data.json
-* teacher: teachersergiy-wq (класний керівник)
-* head: логін старости на GitHub (уточнити в користувача)
+* teacher: teacher (класний керівник)
+* head: starosta (староста)
 
 Формат data.json
 ```json
