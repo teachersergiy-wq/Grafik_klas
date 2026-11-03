@@ -92,6 +92,13 @@
       <p class="muted" id="timeWindowHint"></p>
       <div class="hint-box">Поставте галочку біля учня, якщо він <strong>відсутній</strong>. Без галочки — присутній.</div>
       <div id="absentList"></div>
+      <div id="dutyPickBlock" class="hidden" style="margin-top:12px">
+        <h2 style="margin-top:8px">Черговий</h2>
+        <p class="muted" id="dutyAutoHint"></p>
+        <label>Призначити чергового з присутніх</label>
+        <select id="dutySelect" style="width:100%;min-height:48px;padding:10px 12px;font-size:16px;border:1px solid var(--border);border-radius:10px;margin-top:6px"></select>
+        <p class="muted" style="margin-top:6px">Якщо призначите вручну (не за розрахунком) — біля імені буде *</p>
+      </div>
       <button type="button" id="btnSaveDay">Зберегти присутність і призначити чергового</button>
       <button type="button" class="secondary hidden" id="btnClearDay">Скасувати запис за день</button>
       <p class="error hidden" id="saveError"></p>
@@ -149,7 +156,7 @@
 
   <div class="card" id="scheduleCard">
     <h2>Графік чергувань</h2>
-    <p class="muted">Останні записи (доступно всім)</p>
+    <p class="muted">Останні записи (доступно всім). * — призначив учитель</p>
     <div id="scheduleList"></div>
   </div>
 
