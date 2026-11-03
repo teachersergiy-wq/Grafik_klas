@@ -70,7 +70,7 @@ async function loadData() {
 }
 
 async function saveData(msg) {
-  if (!token) throw new Error("Немає токена збереження. Вчитель має ввести його в «Налашт.»");
+  if (!token) throw new Error("Немає токена збереження. Вставте його у блок «Токен для збереження» вище.");
   const content = btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2))));
   const body = { message: msg || "Оновлення графіка чергування", content: content, branch: "main" };
   if (dataSha) body.sha = dataSha;
@@ -376,16 +376,32 @@ function renderAuth() {
   }
 
   const isTeacher = role === "teacher";
+  const isHead = role === "head";
   document.getElementById("tabStudentsBtn").classList.toggle("hidden", !isTeacher);
   document.getElementById("tabHistoryBtn").classList.toggle("hidden", !isTeacher);
   document.getElementById("tabSettingsBtn").classList.toggle("hidden", !isTeacher);
   document.getElementById("studentsHint").textContent = "Можна змінити ім’я, дні в школі та кількість чергувань.";
 
+  const tokenCard = document.getElementById("tokenSetupCard");
+  if (tokenCard) {
+    if ((isTeacher || isHead) && !token) {
+      tokenCard.classList.remove("hidden");
+    } else {
+      tokenCard.classList.add("hidden");
+    }
+  }
+  const tss = document.getElementById("tokenSharedStatus");
+  if (tss) {
+    tss.textContent = token
+      ? "Токен збереження на цьому телефоні є — можна зберігати дані."
+      : "Без токена збереження неможливе. Вставте токен вище (його дає вчитель).";
+  }
+
   const ts = document.getElementById("tokenStatus");
   if (ts) {
     ts.textContent = token
       ? "Токен збереження на цьому телефоні є."
-      : "Токена ще немає — збереження не працюватиме, доки вчитель не введе токен.";
+      : "Токена ще немає — збереження не працюватиме.";
   }
   renderDraftBanner();
 }
