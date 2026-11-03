@@ -159,42 +159,53 @@ function renderStats() {
   }).join("");
 }
 
+function renderSchedule() {
+  const list = document.getElementById("scheduleList");
+  const dates = Object.keys(data.days || {}).sort().reverse();
+  if (!dates.length) {
+    list.innerHTML = "<p class='muted'>Записів ще немає.</p>";
+    return;
+  }
+  list.innerHTML = dates.slice(0, 30).map(function (d) {
+    const rec = data.days[d];
+    const st = studentById(rec.duty);
+    const name = st ? st.name : (rec.duty || "—");
+    return '<div class="schedule-row"><span>' + formatDateUk(d) + '</span><strong>' + escapeHtml(name) + "</strong></div>";
+  }).join("");
+}
+
 function renderAuth() {
   const auth = document.getElementById("authSection");
   const out = document.getElementById("loggedOut");
   const inn = document.getElementById("loggedIn");
   const lockBtn = document.getElementById("btnToggleLogin");
+
   if (userLogin && role !== "viewer") {
-    auth.classList.remove("hidden");
     out.classList.add("hidden");
     inn.classList.remove("hidden");
     document.getElementById("userLogin").textContent = userLogin;
     document.getElementById("userRole").textContent = role === "teacher" ? "класний керівник" : "староста";
     document.getElementById("editorSection").classList.remove("hidden");
     lockBtn.textContent = "🔓";
-    lockBtn.title = "Ви в системі";
+    lockBtn.title = "Обліковий запис";
+    if (loginOpen) auth.classList.remove("hidden");
+    else auth.classList.add("hidden");
   } else {
     inn.classList.add("hidden");
     out.classList.remove("hidden");
     document.getElementById("editorSection").classList.add("hidden");
-    if (loginOpen) {
-      auth.classList.remove("hidden");
-      lockBtn.textContent = "🔓";
-    } else {
-      auth.classList.add("hidden");
-      lockBtn.textContent = "🔒";
-    }
+    lockBtn.textContent = "🔒";
     lockBtn.title = "Вхід";
+    if (loginOpen) auth.classList.remove("hidden");
+    else auth.classList.add("hidden");
   }
+
   const isTeacher = role === "teacher";
-  const isHead = role === "head";
-  document.getElementById("tabStudentsBtn").classList.toggle("hidden", !(isTeacher || isHead));
+  document.getElementById("tabStudentsBtn").classList.toggle("hidden", !isTeacher);
   document.getElementById("tabHistoryBtn").classList.toggle("hidden", !isTeacher);
   document.getElementById("tabSettingsBtn").classList.toggle("hidden", !isTeacher);
-  document.getElementById("addStudentBlock").classList.toggle("hidden", !isTeacher);
-  document.getElementById("studentsHint").textContent = isTeacher
-    ? "Можна змінити ім’я, дні в школі та кількість чергувань."
-    : "Лише перегляд. Змінювати учнів може тільки вчитель.";
+  document.getElementById("studentsHint").textContent = "Можна змінити ім’я, дні в школі та кількість чергувань.";
+
   const ts = document.getElementById("tokenStatus");
   if (ts) {
     ts.textContent = token
@@ -232,7 +243,7 @@ function renderEditor() {
   const absentSet = {};
   (rec.absent || []).forEach(function (id) { absentSet[id] = true; });
   if (!data.students.length) {
-    list.innerHTML = "<p class='muted'>Спочатку додайте учнів (вкладка «Учні» — лише вчитель).</p>";
+    list.innerHTML = "<p class='muted'>Спочатку додайте учнів (вкладка «Учні»).</p>";
   } else {
     const sorted = data.students.slice().sort(function (a, b) {
       return a.name.localeCompare(b.name, "uk");
@@ -244,7 +255,7 @@ function renderEditor() {
       const cls = isAbs ? "absent-row marked" : "absent-row";
       return '<label class="' + cls + '">' +
         '<input type="checkbox" data-id="' + s.id + '" ' + checked + " " + dis + ">" +
-        '<span class="student-name"><strong>' + escapeHtml(s.name) + '</strong>' +
+        '<span class="student-name"><strong>' + escapeHtml(s.name) + "</strong>" +
         '<div class="mark-label">' + (isAbs ? "відсутній" : "присутній") + "</div></span></label>";
     }).join("");
     list.querySelectorAll("input[type=checkbox]").forEach(function (cb) {
@@ -260,12 +271,13 @@ function renderEditor() {
   document.getElementById("btnClearDay").classList.toggle("hidden", !(role === "teacher" && dayRecord(editDate)));
   document.getElementById("saveError").classList.add("hidden");
   document.getElementById("saveOk").classList.add("hidden");
-  renderStudentsManage();
+  if (role === "teacher") renderStudentsManage();
   document.getElementById("histDate").value = editDate;
 }
 
 function renderStudentsManage() {
   const sm = document.getElementById("studentsManage");
+  if (!sm) return;
   if (!data.students.length) { sm.innerHTML = "<p class='muted'>Порожньо</p>"; return; }
   const sorted = data.students.slice().sort(function (a, b) {
     return a.name.localeCompare(b.name, "uk");
@@ -273,17 +285,12 @@ function renderStudentsManage() {
   sm.innerHTML = sorted.map(function (s) {
     const pct = (calcPct(s) * 100).toFixed(1);
     let html = '<div class="student-row" style="flex-wrap:wrap">' +
-      '<span class="student-name"><strong>' + escapeHtml(s.name) + '</strong>' +
-      (role === "teacher"
-        ? '<span class="muted" style="display:block;font-size:0.85rem">' + s.ch + " черг. / " + s.b + " дн. (" + pct + "%)</span>"
-        : '<span class="muted" style="display:block;font-size:0.85rem">' + pct + "%</span>") +
-      "</span>";
-    if (role === "teacher") {
-      html += '<button type="button" class="secondary small-btn" data-edit="' + s.id + '">Змінити</button>';
-      html += '<button type="button" class="secondary small-btn" data-del="' + s.id + '">Видалити</button>';
-    }
+      '<span class="student-name"><strong>' + escapeHtml(s.name) + "</strong>" +
+      '<span class="muted" style="display:block;font-size:0.85rem">' + s.ch + " черг. / " + s.b + " дн. (" + pct + "%)</span></span>";
+    html += '<button type="button" class="secondary small-btn" data-edit="' + s.id + '">Змінити</button>';
+    html += '<button type="button" class="secondary small-btn" data-del="' + s.id + '">Видалити</button>';
     html += "</div>";
-    if (role === "teacher" && editingId === s.id) {
+    if (editingId === s.id) {
       html += '<div class="edit-panel" data-edit-panel="' + s.id + '">' +
         "<label>Ім’я</label><input type=\"text\" data-f=\"name\" value=\"" + escapeHtml(s.name) + "\">" +
         "<label>Днів у школі (b)</label><input type=\"number\" data-f=\"b\" min=\"0\" value=\"" + (s.b || 0) + "\">" +
@@ -338,6 +345,7 @@ async function saveStudentEdit(id) {
 function renderAll() {
   renderDuty();
   renderStats();
+  renderSchedule();
   renderAuth();
   if (role === "teacher" || role === "head") renderEditor();
 }
@@ -360,11 +368,6 @@ function reverseDay(rec) {
 }
 
 document.getElementById("btnToggleLogin").onclick = function () {
-  if (userLogin && role !== "viewer") {
-    loginOpen = true;
-    document.getElementById("authSection").classList.remove("hidden");
-    return;
-  }
   loginOpen = !loginOpen;
   renderAuth();
 };
@@ -387,7 +390,7 @@ document.getElementById("btnLogin").onclick = function () {
   localStorage.setItem("gk_login", userLogin);
   localStorage.setItem("gk_role", role);
   document.getElementById("passInput").value = "";
-  loginOpen = true;
+  loginOpen = false;
   renderAll();
 };
 
@@ -396,6 +399,13 @@ document.getElementById("btnLogout").onclick = function () {
   localStorage.removeItem("gk_login");
   localStorage.removeItem("gk_role");
   loginOpen = false;
+  document.querySelectorAll(".tabs button").forEach(function (b) { b.classList.remove("active"); });
+  const todayTab = document.querySelector('.tabs button[data-tab="today"]');
+  if (todayTab) todayTab.classList.add("active");
+  ["today", "students", "history", "settings"].forEach(function (t) {
+    const el = document.getElementById("tab-" + t);
+    if (el) el.classList.toggle("hidden", t !== "today");
+  });
   renderAll();
 };
 
@@ -409,6 +419,16 @@ document.querySelectorAll(".tabs button").forEach(function (btn) {
     });
   };
 });
+
+document.getElementById("btnShowAddStudent").onclick = function () {
+  document.getElementById("addStudentForm").classList.remove("hidden");
+  document.getElementById("btnShowAddStudent").classList.add("hidden");
+};
+document.getElementById("btnCancelAddStudent").onclick = function () {
+  document.getElementById("addStudentForm").classList.add("hidden");
+  document.getElementById("btnShowAddStudent").classList.remove("hidden");
+  document.getElementById("studError").classList.add("hidden");
+};
 
 document.getElementById("btnSaveToken").onclick = function () {
   const t = document.getElementById("writeTokenInput").value.trim();
@@ -507,6 +527,8 @@ document.getElementById("btnAddStudent").onclick = async function () {
   try {
     await saveData("Додано учня " + name);
     document.getElementById("newName").value = "";
+    document.getElementById("addStudentForm").classList.add("hidden");
+    document.getElementById("btnShowAddStudent").classList.remove("hidden");
     renderAll();
   } catch (e) {
     data.students.pop();
