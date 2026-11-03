@@ -1,1 +1,148 @@
-<!DOCTYPE html><html lang="uk"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Графік</title></head><body><p>Оновлення… відкрийте знову через хвилину.</p><script>location.reload()</script></body></html>
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>Графік чергування — 7 клас</title>
+  <style>
+    :root { --bg:#f5f7fa; --card:#fff; --primary:#2563eb; --primary-dark:#1d4ed8; --danger:#dc2626; --success:#16a34a; --text:#1e293b; --muted:#64748b; --border:#e2e8f0; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 16px; line-height: 1.45; background: var(--bg); color: var(--text); padding: 12px; max-width: 480px; margin: 0 auto; min-height: 100vh; }
+    h1 { font-size: 1.35rem; margin-bottom: 4px; }
+    h2 { font-size: 1.1rem; margin: 16px 0 8px; }
+    .muted { color: var(--muted); font-size: 0.9rem; }
+    .card { background: var(--card); border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+    .top-bar { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+    .icon-btn { flex-shrink: 0; width: 48px; height: 48px; min-height: 48px; margin: 0; padding: 0; border-radius: 12px; background: #e2e8f0; color: var(--text); font-size: 22px; display: flex; align-items: center; justify-content: center; }
+    .duty-big { font-size: 1.5rem; font-weight: 700; text-align: center; padding: 20px 12px; background: linear-gradient(135deg, #dbeafe, #eff6ff); border-radius: 12px; margin: 12px 0 0; }
+    .duty-big .label { font-size: 0.85rem; font-weight: 500; color: var(--muted); display: block; margin-bottom: 4px; }
+    button { display: block; width: 100%; min-height: 48px; padding: 12px 16px; font-size: 16px; font-weight: 600; border: none; border-radius: 10px; cursor: pointer; margin-top: 8px; background: var(--primary); color: #fff; }
+    button:active { opacity: .9; }
+    button.secondary { background: #e2e8f0; color: var(--text); }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+    input[type="text"], input[type="password"], input[type="number"], input[type="date"] { width: 100%; min-height: 48px; padding: 10px 12px; font-size: 16px; border: 1px solid var(--border); border-radius: 10px; margin-top: 6px; }
+    label { display: block; margin-top: 12px; font-weight: 500; }
+    .student-row { display: flex; align-items: center; gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+    .student-row:last-child { border-bottom: none; }
+    .student-name { flex: 1; }
+    .pct { font-size: 0.95rem; font-weight: 600; color: var(--primary-dark); min-width: 56px; text-align: right; }
+    .role-badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; background: #dbeafe; color: var(--primary-dark); }
+    .hidden { display: none !important; }
+    .error { color: var(--danger); margin-top: 8px; }
+    .ok { color: var(--success); margin-top: 8px; }
+    .tabs { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+    .tabs button { flex: 1; min-width: 70px; margin-top: 0; background: #e2e8f0; color: var(--text); }
+    .tabs button.active { background: var(--primary); color: #fff; }
+    footer { text-align: center; margin-top: 24px; color: var(--muted); font-size: 0.8rem; }
+    .hint-box { background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 12px; margin-top: 12px; font-size: 0.9rem; }
+    .absent-row { display: flex; align-items: center; gap: 12px; padding: 12px; margin: 8px 0; border-radius: 10px; border: 2px solid var(--border); background: #f8fafc; }
+    .absent-row.marked { border-color: #fca5a5; background: #fef2f2; }
+    .absent-row input[type="checkbox"] { width: 28px; height: 28px; flex-shrink: 0; }
+    .absent-row .mark-label { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
+    .absent-row.marked .mark-label { color: var(--danger); font-weight: 600; }
+    .edit-panel { background: #f8fafc; border-radius: 10px; padding: 12px; margin-top: 8px; border: 1px solid var(--border); }
+    .small-btn { width: auto; min-height: 40px; padding: 8px 12px; margin: 0; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div class="top-bar">
+    <div>
+      <h1>Чергування 7 класу</h1>
+      <p class="muted" id="todayLabel"></p>
+    </div>
+    <button type="button" class="icon-btn" id="btnToggleLogin" title="Вхід" aria-label="Вхід">🔒</button>
+  </div>
+
+  <div class="card">
+    <div class="duty-big">
+      <span class="label">Сьогодні черговий</span>
+      <span id="dutyName">—</span>
+    </div>
+    <p class="muted" id="dutyHint" style="margin-top:8px"></p>
+  </div>
+
+  <div id="authSection" class="card hidden">
+    <div id="loggedOut">
+      <p><strong>Вхід для вчителя або старости</strong></p>
+      <label>Логін</label>
+      <input type="text" id="loginInput" placeholder="starosta або teacher" autocomplete="username">
+      <label>Пароль</label>
+      <input type="password" id="passInput" placeholder="Пароль" autocomplete="current-password">
+      <button id="btnLogin">Увійти</button>
+      <p class="error hidden" id="loginError"></p>
+    </div>
+    <div id="loggedIn" class="hidden">
+      <p>Ви: <strong id="userLogin"></strong> <span class="role-badge" id="userRole"></span></p>
+      <button class="secondary" id="btnLogout">Вийти</button>
+    </div>
+  </div>
+
+  <div id="editorSection" class="hidden">
+    <div class="tabs">
+      <button type="button" class="active" data-tab="today">Сьогодні</button>
+      <button type="button" data-tab="students" id="tabStudentsBtn">Учні</button>
+      <button type="button" data-tab="history" id="tabHistoryBtn">Історія</button>
+      <button type="button" data-tab="settings" id="tabSettingsBtn">Налашт.</button>
+    </div>
+    <div id="tab-today" class="card">
+      <h2>Присутність на <span id="editDateLabel"></span></h2>
+      <p class="muted" id="timeWindowHint"></p>
+      <div class="hint-box">Поставте галочку біля учня, якщо він <strong>відсутній</strong>. Без галочки — присутній.</div>
+      <div id="absentList"></div>
+      <button id="btnSaveDay">Зберегти присутність і призначити чергового</button>
+      <button class="secondary hidden" id="btnClearDay">Скасувати запис за день</button>
+      <p class="error hidden" id="saveError"></p>
+      <p class="ok hidden" id="saveOk"></p>
+    </div>
+    <div id="tab-students" class="card hidden">
+      <h2>Список учнів</h2>
+      <p class="muted" id="studentsHint"></p>
+      <div id="studentsManage"></div>
+      <div id="addStudentBlock">
+        <h2 style="margin-top:20px">Додати учня</h2>
+        <label>Ім’я (Прізвище І.)</label>
+        <input type="text" id="newName" placeholder="Петренко О.">
+        <label>Днів у школі (b)</label>
+        <input type="number" id="newB" value="0" min="0">
+        <label>Разів чергував (ch)</label>
+        <input type="number" id="newCh" value="0" min="0">
+        <button id="btnAddStudent">Додати</button>
+        <p class="error hidden" id="studError"></p>
+      </div>
+    </div>
+    <div id="tab-history" class="card hidden">
+      <h2>Історія / інша дата</h2>
+      <label>Дата</label>
+      <input type="date" id="histDate">
+      <button class="secondary" id="btnLoadDate">Відкрити дату</button>
+      <div id="histInfo" style="margin-top:12px"></div>
+    </div>
+    <div id="tab-settings" class="card hidden">
+      <h2>Налаштування (лише вчитель)</h2>
+      <p class="muted">Токен GitHub для збереження даних (Contents: Read and write).</p>
+      <label>Токен для збереження</label>
+      <input type="password" id="writeTokenInput" placeholder="github_pat_..." autocomplete="off">
+      <button id="btnSaveToken">Зберегти токен на цьому телефоні</button>
+      <p class="ok hidden" id="tokenOk"></p>
+      <p class="error hidden" id="tokenErr"></p>
+      <p class="muted" id="tokenStatus" style="margin-top:8px"></p>
+      <h2 style="margin-top:20px">Паролі</h2>
+      <label>Новий пароль вчителя</label>
+      <input type="password" id="newTeacherPass" placeholder="Порожньо = не змінювати">
+      <label>Новий пароль старости</label>
+      <input type="password" id="newStarostaPass" placeholder="Порожньо = не змінювати">
+      <button id="btnSavePasswords">Змінити паролі</button>
+      <p class="ok hidden" id="passOk"></p>
+      <p class="error hidden" id="passErr"></p>
+    </div>
+  </div>
+
+  <div class="card" id="statsCard">
+    <h2>Учні (частка чергувань)</h2>
+    <div id="statsList"></div>
+  </div>
+  <footer>Графік чергування 7 класу</footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
