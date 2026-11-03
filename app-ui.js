@@ -62,20 +62,34 @@ document.getElementById("btnCancelAddStudent").onclick = function () {
   document.getElementById("studError").classList.add("hidden");
 };
 
-document.getElementById("btnSaveToken").onclick = function () {
-  const t = document.getElementById("writeTokenInput").value.trim();
-  const ok = document.getElementById("tokenOk");
-  const er = document.getElementById("tokenErr");
-  ok.classList.add("hidden"); er.classList.add("hidden");
-  if (!t) { er.textContent = "Вставте токен"; er.classList.remove("hidden"); return; }
+function saveTokenFromInput(inputId, okId, errId) {
+  const t = document.getElementById(inputId).value.trim();
+  const ok = document.getElementById(okId);
+  const er = document.getElementById(errId);
+  if (ok) ok.classList.add("hidden");
+  if (er) er.classList.add("hidden");
+  if (!t) {
+    if (er) { er.textContent = "Вставте токен"; er.classList.remove("hidden"); }
+    return;
+  }
   token = t;
   localStorage.setItem("gk_write_token", token);
-  ok.textContent = "Токен збережено на цьому телефоні.";
-  ok.classList.remove("hidden");
-  document.getElementById("writeTokenInput").value = "";
+  if (ok) { ok.textContent = "Токен збережено на цьому телефоні."; ok.classList.remove("hidden"); }
+  document.getElementById(inputId).value = "";
   renderAuth();
   trySendDraft();
+}
+
+document.getElementById("btnSaveToken").onclick = function () {
+  saveTokenFromInput("writeTokenInput", "tokenOk", "tokenErr");
 };
+
+var btnShared = document.getElementById("btnSaveTokenShared");
+if (btnShared) {
+  btnShared.onclick = function () {
+    saveTokenFromInput("writeTokenInputShared", "tokenSharedOk", "tokenSharedErr");
+  };
+}
 
 document.getElementById("btnSavePasswords").onclick = async function () {
   if (role !== "teacher") return;
@@ -103,6 +117,13 @@ document.getElementById("btnSaveDay").onclick = async function () {
   err.classList.add("hidden"); ok.classList.add("hidden");
   if (!canEditDay(editDate)) {
     err.textContent = "Немає права зберегти цей день."; err.classList.remove("hidden"); return;
+  }
+  if (!token) {
+    err.textContent = "Спочатку вставте токен у блок «Токен для збереження» вище.";
+    err.classList.remove("hidden");
+    var card = document.getElementById("tokenSetupCard");
+    if (card) card.classList.remove("hidden");
+    return;
   }
   const absent = getSelectedAbsentIds();
   const autoId = pickDuty(absent);
@@ -140,7 +161,7 @@ document.getElementById("btnSendDraft").onclick = async function () {
   const d = loadDraft();
   if (!d) return;
   try {
-    if (!token) throw new Error("Спочатку введіть токен у налаштуваннях (вчитель).");
+    if (!token) throw new Error("Спочатку введіть токен у блоці «Токен для збереження».");
     await applyAndSaveDay(d.date, d.absent, d.duty, d.by, "Чернетка: присутність за " + d.date);
     clearDraft();
     renderAll();
