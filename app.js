@@ -107,6 +107,20 @@ function pickDuty(absentIds) {
   return present[0].id;
 }
 function dayRecord(date) { return data.days[date] || null; }
+function isManualDuty(rec) {
+  return !!(rec && (rec.by === "teacher" || rec.manual === true));
+}
+function dutyLabel(rec) {
+  if (!rec || !rec.duty) return "—";
+  const st = studentById(rec.duty);
+  const name = st ? st.name : ("id " + rec.duty);
+  return isManualDuty(rec) ? (name + " *") : name;
+}
+function dutyRuleText(rec) {
+  if (!rec || !rec.duty) return "";
+  if (isManualDuty(rec)) return "призначив учитель *";
+  return "за відсотковим розрахунком";
+}
 function escapeHtml(s) {
   const amp = String.fromCharCode(38) + "amp;";
   const lt = String.fromCharCode(38) + "lt;";
@@ -129,13 +143,14 @@ function renderDuty() {
     dutyEl.textContent = "ще не призначено";
     hint.textContent = "Черговий з’явиться після збереження присутності за сьогодні.";
   } else {
-    const st = studentById(rec.duty);
-    dutyEl.textContent = st ? st.name : "id " + rec.duty;
+    dutyEl.textContent = dutyLabel(rec);
     const abs = (rec.absent || []).map(function (id) {
       const s = studentById(id);
       return s ? s.name : id;
     });
-    hint.textContent = abs.length ? "Відсутні: " + abs.join(", ") : "Усі присутні";
+    let t2 = abs.length ? "Відсутні: " + abs.join(", ") : "Усі присутні";
+    t2 += " · " + dutyRuleText(rec);
+    hint.textContent = t2;
   }
 }
 
@@ -168,8 +183,7 @@ function renderSchedule() {
   }
   list.innerHTML = dates.slice(0, 30).map(function (d) {
     const rec = data.days[d];
-    const st = studentById(rec.duty);
-    const name = st ? st.name : (rec.duty || "—");
+    const name = dutyLabel(rec);
     return '<div class="schedule-row"><span>' + formatDateUk(d) + '</span><strong>' + escapeHtml(name) + "</strong></div>";
   }).join("");
 }
@@ -264,15 +278,57 @@ function renderEditor() {
         const lab = row.querySelector(".mark-label");
         if (cb.checked) { row.classList.add("marked"); lab.textContent = "відсутній"; }
         else { row.classList.remove("marked"); lab.textContent = "присутній"; }
+        if (role === "teacher") updateDutyPickUI(can);
       };
     });
   }
+  updateDutyPickUI(can);
   document.getElementById("btnSaveDay").disabled = !can;
   document.getElementById("btnClearDay").classList.toggle("hidden", !(role === "teacher" && dayRecord(editDate)));
   document.getElementById("saveError").classList.add("hidden");
   document.getElementById("saveOk").classList.add("hidden");
   if (role === "teacher") renderStudentsManage();
   document.getElementById("histDate").value = editDate;
+}
+
+function getSelectedAbsentIds() {
+  const absent = [];
+  document.querySelectorAll("#absentList input[type=checkbox]").forEach(function (cb) {
+    if (cb.checked) absent.push(cb.getAttribute("data-id"));
+  });
+  return absent;
+}
+
+function updateDutyPickUI(can) {
+  const block = document.getElementById("dutyPickBlock");
+  const sel = document.getElementById("dutySelect");
+  const autoHint = document.getElementById("dutyAutoHint");
+  if (!block || !sel) return;
+  if (role !== "teacher") {
+    block.classList.add("hidden");
+    return;
+  }
+  block.classList.remove("hidden");
+  const absent = getSelectedAbsentIds();
+  const present = data.students.filter(function (s) { return absent.indexOf(s.id) < 0; })
+    .slice().sort(function (a, b) { return a.name.localeCompare(b.name, "uk"); });
+  const autoId = pickDuty(absent);
+  const autoSt = autoId ? studentById(autoId) : null;
+  autoHint.textContent = autoSt
+    ? ("За розрахунком відсотків: " + autoSt.name)
+    : "Немає присутніх для чергування.";
+  const prev = dayRecord(editDate);
+  const current = (sel.value && present.some(function (s) { return s.id === sel.value; }))
+    ? sel.value
+    : (prev && prev.duty && present.some(function (s) { return s.id === prev.duty; })
+      ? prev.duty
+      : (autoId || ""));
+  sel.innerHTML = present.map(function (s) {
+    const mark = (s.id === autoId) ? " (за розрахунком)" : "";
+    return '<option value="' + s.id + '">' + escapeHtml(s.name) + mark + "</option>";
+  }).join("");
+  if (current) sel.value = current;
+  sel.disabled = !can || !present.length;
 }
 
 function renderStudentsManage() {
@@ -471,22 +527,32 @@ document.getElementById("btnSaveDay").onclick = async function () {
   if (!canEditDay(editDate)) {
     err.textContent = "Немає права зберегти цей день."; err.classList.remove("hidden"); return;
   }
-  const absent = [];
-  document.querySelectorAll("#absentList input[type=checkbox]").forEach(function (cb) {
-    if (cb.checked) absent.push(cb.getAttribute("data-id"));
-  });
-  const duty = pickDuty(absent);
+  const absent = getSelectedAbsentIds();
+  const autoId = pickDuty(absent);
+  let duty = autoId;
+  let by = "auto";
+  if (role === "teacher") {
+    const sel = document.getElementById("dutySelect");
+    const chosen = sel ? sel.value : "";
+    if (chosen) duty = chosen;
+    if (duty && duty !== autoId) by = "teacher";
+  }
   if (!duty) {
     err.textContent = "Немає присутніх учнів для чергування."; err.classList.remove("hidden"); return;
   }
+  if (absent.indexOf(duty) >= 0) {
+    err.textContent = "Черговий не може бути серед відсутніх."; err.classList.remove("hidden"); return;
+  }
   const prev = dayRecord(editDate);
   if (prev) reverseDay(prev);
-  data.days[editDate] = { absent: absent, duty: duty };
+  data.days[editDate] = { absent: absent, duty: duty, by: by };
   applyDay(data.days[editDate]);
   try {
     await saveData("Присутність і черговий за " + editDate);
     const st = studentById(duty);
-    ok.textContent = "Збережено. Черговий: " + (st ? st.name : duty);
+    const star = by === "teacher" ? " *" : "";
+    ok.textContent = "Збережено. Черговий: " + (st ? st.name : duty) + star +
+      (by === "teacher" ? " (призначив учитель)" : " (за розрахунком)");
     ok.classList.remove("hidden");
     renderAll();
   } catch (e) {
@@ -563,13 +629,20 @@ document.getElementById("btnLoadDate").onclick = function () {
   const info = document.getElementById("histInfo");
   if (!rec) info.innerHTML = "<p class='muted'>Записів немає</p>";
   else {
-    const st = studentById(rec.duty);
-    info.innerHTML = "<p>Черговий: <strong>" + (st ? escapeHtml(st.name) : rec.duty) +
-      '</strong></p><p class="muted">Відсутні: ' +
-      ((rec.absent || []).map(function (id) {
-        const s = studentById(id);
-        return s ? s.name : id;
-      }).join(", ") || "—") + "</p>";
+    const absIds = rec.absent || [];
+    const presentNames = data.students
+      .filter(function (s) { return absIds.indexOf(s.id) < 0; })
+      .map(function (s) { return s.name; })
+      .sort(function (a, b) { return a.localeCompare(b, "uk"); });
+    const absentNames = absIds.map(function (id) {
+      const s = studentById(id);
+      return s ? s.name : id;
+    });
+    info.innerHTML =
+      "<p>Черговий: <strong>" + escapeHtml(dutyLabel(rec)) + "</strong></p>" +
+      "<p class=\"muted\">Правило: " + escapeHtml(dutyRuleText(rec)) + "</p>" +
+      "<p style=\"margin-top:8px\"><strong>Відсутні:</strong> " + escapeHtml(absentNames.join(", ") || "—") + "</p>" +
+      "<p><strong>Присутні:</strong> " + escapeHtml(presentNames.join(", ") || "—") + "</p>";
   }
 };
 
