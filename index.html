@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-  <title>Графік чергування — 7 клас</title>
+  <title>Чергування 8 клас</title>
   <style>
-    :root { --bg:#f5f7fa; --card:#fff; --primary:#2563eb; --primary-dark:#1d4ed8; --danger:#dc2626; --success:#16a34a; --text:#1e293b; --muted:#64748b; --border:#e2e8f0; }
+    :root { --bg:#f5f7fa; --card:#fff; --primary:#2563eb; --primary-dark:#1d4ed8; --danger:#dc2626; --success:#16a34a; --text:#1e293b; --muted:#64748b; --border:#e2e8f0; --warn:#d97706; }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 16px; line-height: 1.45; background: var(--bg); color: var(--text); padding: 12px; max-width: 480px; margin: 0 auto; min-height: 100vh; }
     h1 { font-size: 1.35rem; margin-bottom: 4px; }
@@ -20,7 +20,7 @@
     button:active { opacity: .9; }
     button.secondary { background: #e2e8f0; color: var(--text); }
     button:disabled { opacity: .5; cursor: not-allowed; }
-    input[type="text"], input[type="password"], input[type="number"], input[type="date"] { width: 100%; min-height: 48px; padding: 10px 12px; font-size: 16px; border: 1px solid var(--border); border-radius: 10px; margin-top: 6px; }
+    input[type="text"], input[type="password"], input[type="number"], input[type="date"], select { width: 100%; min-height: 48px; padding: 10px 12px; font-size: 16px; border: 1px solid var(--border); border-radius: 10px; margin-top: 6px; }
     label { display: block; margin-top: 12px; font-weight: 500; }
     .student-row { display: flex; align-items: center; gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--border); }
     .student-row:last-child { border-bottom: none; }
@@ -43,14 +43,23 @@
     .edit-panel { background: #f8fafc; border-radius: 10px; padding: 12px; margin-top: 8px; border: 1px solid var(--border); }
     .small-btn { width: auto; min-height: 40px; padding: 8px 12px; margin: 0; font-size: 14px; }
     .auth-panel { margin-top: 8px; }
-    .schedule-row { padding: 10px 0; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; gap: 8px; }
+    .schedule-row { padding: 10px 0; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; gap: 8px; align-items: center; }
     .schedule-row:last-child { border-bottom: none; }
+    .week-grid { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 8px; }
+    .week-day { border: 1px solid var(--border); border-radius: 10px; padding: 12px; background: #f8fafc; }
+    .week-day.today { border-color: var(--primary); background: #eff6ff; }
+    .week-day .wd { font-size: 0.8rem; color: var(--muted); font-weight: 600; text-transform: uppercase; }
+    .week-day .wn { font-size: 1.1rem; font-weight: 700; margin-top: 4px; }
+    .alert-banner { background: #fff7ed; border: 2px solid #fdba74; border-radius: 12px; padding: 14px; margin-bottom: 12px; }
+    .alert-banner strong { display: block; font-size: 1.05rem; color: var(--warn); margin-bottom: 4px; }
+    .draft-banner { background: #ecfdf5; border: 2px solid #6ee7b7; border-radius: 12px; padding: 14px; margin-bottom: 12px; }
+    .draft-banner button { margin-top: 10px; }
   </style>
 </head>
 <body>
   <div class="top-bar">
     <div>
-      <h1>Чергування 7 класу</h1>
+      <h1>Чергування 8 клас</h1>
       <p class="muted" id="todayLabel"></p>
     </div>
     <button type="button" class="icon-btn" id="btnToggleLogin" title="Вхід" aria-label="Вхід">🔒</button>
@@ -72,12 +81,29 @@
     </div>
   </div>
 
+  <div id="lateBanner" class="alert-banner hidden">
+    <strong id="lateTitle">Увага</strong>
+    <span id="lateText"></span>
+  </div>
+
+  <div id="draftBanner" class="draft-banner hidden">
+    <strong>Є незбережена чернетка</strong>
+    <p class="muted" id="draftText" style="margin-top:4px"></p>
+    <button type="button" id="btnSendDraft">Надіслати чернетку зараз</button>
+    <button type="button" class="secondary" id="btnDiscardDraft">Видалити чернетку</button>
+  </div>
+
   <div class="card">
     <div class="duty-big">
       <span class="label">Сьогодні черговий</span>
       <span id="dutyName">—</span>
     </div>
     <p class="muted" id="dutyHint" style="margin-top:8px"></p>
+  </div>
+
+  <div class="card" id="weekCard">
+    <h2>Цей тиждень (пн–пт)</h2>
+    <div class="week-grid" id="weekGrid"></div>
   </div>
 
   <div id="editorSection" class="hidden">
@@ -96,8 +122,8 @@
         <h2 style="margin-top:8px">Черговий</h2>
         <p class="muted" id="dutyAutoHint"></p>
         <label>Призначити чергового з присутніх</label>
-        <select id="dutySelect" style="width:100%;min-height:48px;padding:10px 12px;font-size:16px;border:1px solid var(--border);border-radius:10px;margin-top:6px"></select>
-        <p class="muted" style="margin-top:6px">Якщо призначите вручну (не за розрахунком) — біля імені буде *</p>
+        <select id="dutySelect"></select>
+        <p class="muted" style="margin-top:6px">Вручну (не за розрахунком) — біля імені буде *</p>
       </div>
       <button type="button" id="btnSaveDay">Зберегти присутність і призначити чергового</button>
       <button type="button" class="secondary hidden" id="btnClearDay">Скасувати запис за день</button>
@@ -156,11 +182,11 @@
 
   <div class="card" id="scheduleCard">
     <h2>Графік чергувань</h2>
-    <p class="muted">Останні записи (доступно всім). * — призначив учитель</p>
+    <p class="muted">Останні записи. * — призначив учитель</p>
     <div id="scheduleList"></div>
   </div>
 
-  <footer>Графік чергування 7 класу</footer>
+  <footer>Чергування 8 клас</footer>
   <script src="app.js"></script>
 </body>
 </html>
