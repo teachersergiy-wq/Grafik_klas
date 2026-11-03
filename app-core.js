@@ -213,21 +213,26 @@ function renderMatrix() {
   });
   const recs = days.map(function (iso) { return dayRecord(iso); });
   tbody.innerHTML = sorted.map(function (s) {
-    const pct = (calcPct(s) * 100).toFixed(0);
-    let row = '<tr><td class="name">' + escapeHtml(s.name) + '</td><td class="pct">' + pct + "%</td>";
+    const pct = (calcPct(s) * 100).toFixed(2);
+    let row = '<tr><td class="name">' + escapeHtml(s.name) + '</td><td class="pct">' + pct + "</td>";
     for (let i = 0; i < 5; i++) {
       const isToday = days[i] === today;
       const rec = recs[i];
       let mark = "";
+      let cellCls = isToday ? "today-col" : "";
       if (rec && rec.duty) {
         const abs = rec.absent || [];
         if (rec.duty === s.id) {
           mark = '<span class="mark-ch">ч</span>';
-        } else if (abs.indexOf(s.id) < 0) {
+          cellCls = (cellCls ? cellCls + " " : "") + "cell-ch";
+        } else if (abs.indexOf(s.id) >= 0) {
+          mark = '<span class="mark-n">н</span>';
+          cellCls = (cellCls ? cellCls + " " : "") + "cell-n";
+        } else {
           mark = '<span class="mark-b">б</span>';
         }
       }
-      row += '<td class="' + (isToday ? "today-col" : "") + '">' + mark + "</td>";
+      row += '<td class="' + cellCls + '">' + mark + "</td>";
     }
     row += "</tr>";
     return row;
