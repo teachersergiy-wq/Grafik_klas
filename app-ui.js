@@ -271,10 +271,18 @@ if (btnTheme) {
 var btnWeekPrev = document.getElementById("btnWeekPrev");
 var btnWeekNext = document.getElementById("btnWeekNext");
 if (btnWeekPrev) {
-  btnWeekPrev.onclick = function () { weekOffset -= 1; renderMatrix(); };
+  btnWeekPrev.onclick = function () { weekOffset -= 1; highlightToday = false; renderMatrix(); };
 }
 if (btnWeekNext) {
-  btnWeekNext.onclick = function () { weekOffset += 1; renderMatrix(); };
+  btnWeekNext.onclick = function () { weekOffset += 1; highlightToday = false; renderMatrix(); };
+}
+var btnJumpToday = document.getElementById("btnJumpToday");
+if (btnJumpToday) {
+  btnJumpToday.onclick = function () {
+    weekOffset = 0;
+    highlightToday = true;
+    renderMatrix();
+  };
 }
 
 loadData();
