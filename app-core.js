@@ -16,6 +16,7 @@ let dataSha = null;
 let loginOpen = false;
 let editingId = null;
 let weekOffset = 0;
+let highlightToday = false;
 let theme = localStorage.getItem("gk_theme") || "light";
 const THEMES = ["light", "dark", "color"];
 const THEME_ICONS = { light: "☀️", dark: "🌙", color: "🎨" };
@@ -197,7 +198,7 @@ function renderMatrix() {
   const tbody = table.querySelector("tbody");
   let head = "<tr><th>Учень</th><th>%</th>";
   for (let i = 0; i < 5; i++) {
-    const isToday = days[i] === today;
+    const isToday = highlightToday && days[i] === today;
     head += '<th class="' + (isToday ? "today-col" : "") + '">' + names[i] + "<br>" +
       days[i].slice(8) + "." + days[i].slice(5, 7) + "</th>";
   }
@@ -216,7 +217,7 @@ function renderMatrix() {
     const pct = (calcPct(s) * 100).toFixed(2);
     let row = '<tr><td class="name">' + escapeHtml(s.name) + '</td><td class="pct">' + pct + "</td>";
     for (let i = 0; i < 5; i++) {
-      const isToday = days[i] === today;
+      const isToday = highlightToday && days[i] === today;
       const rec = recs[i];
       let mark = "";
       let cellCls = isToday ? "today-col" : "";
