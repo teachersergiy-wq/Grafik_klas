@@ -25,7 +25,7 @@
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 16px; line-height: 1.45; background: var(--bg); color: var(--text); padding: 12px; max-width: 520px; margin: 0 auto; min-height: 100vh; }
-    h1 { font-size: 1.25rem; margin-bottom: 4px; }
+    h1 { font-size: 1.375rem; margin-bottom: 4px; }
     h2 { font-size: 1.05rem; margin: 12px 0 8px; }
     .muted { color: var(--muted); font-size: 0.9rem; }
     .card { background: var(--card); border-radius: 12px; padding: 14px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.08); border: 1px solid var(--border); }
@@ -63,8 +63,11 @@
     .week-nav .icon-btn { width: 44px; height: 44px; min-height: 44px; }
     .week-nav .week-label { flex: 1; text-align: center; font-weight: 600; font-size: 0.95rem; }
     .matrix-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-    table.matrix { width: 100%; border-collapse: collapse; min-width: 360px; font-size: 0.85rem; }
-    table.matrix th, table.matrix td { border: 1px solid var(--border); padding: 6px 4px; text-align: center; }
+    table.matrix { width: 100%; border-collapse: collapse; table-layout: fixed; min-width: 360px; font-size: 0.85rem; }
+    table.matrix col.name-col { width: 28%; }
+    table.matrix col.pct-col { width: 12%; }
+    table.matrix col.day-col { width: 12%; }
+    table.matrix th, table.matrix td { border: 1px solid var(--border); padding: 6px 4px; text-align: center; overflow: hidden; }
     table.matrix th { background: var(--cell); font-weight: 600; font-size: 0.75rem; color: var(--muted); }
     table.matrix th.today-col { background: var(--today); color: var(--primary-dark); }
     table.matrix td.today-col { background: var(--today); }
@@ -79,7 +82,7 @@
     [data-theme="dark"] table.matrix td.cell-ch { background: #dc2626 !important; }
     [data-theme="color"] table.matrix td.cell-ch { background: #e11d48 !important; }
     [data-theme="color"] table.matrix td.cell-n { background: #f1f5f9 !important; }
-    .legend { font-size: 0.8rem; color: var(--muted); margin-top: 8px; }
+    .legend { font-size: 0.72rem; color: var(--muted); margin-top: 8px; }
     .student-row { display: flex; align-items: center; gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--border); }
     .student-row:last-child { border-bottom: none; }
     .student-name { flex: 1; }
@@ -145,11 +148,21 @@
     </div>
     <div class="matrix-wrap">
       <table class="matrix" id="matrixTable">
+        <colgroup>
+          <col class="name-col">
+          <col class="pct-col">
+          <col class="day-col">
+          <col class="day-col">
+          <col class="day-col">
+          <col class="day-col">
+          <col class="day-col">
+        </colgroup>
         <thead></thead>
         <tbody></tbody>
       </table>
     </div>
     <p class="legend"><strong>ч</strong> — черговий · <strong>б</strong> — був у школі · <strong>н</strong> — не був · порожньо — немає запису</p>
+    <button type="button" class="secondary" id="btnJumpToday" style="margin-top:10px">Сьогодні</button>
   </div>
 
   <div id="editorSection" class="hidden">
@@ -231,7 +244,6 @@
     </div>
   </div>
 
-  <footer>Чергування 8 клас</footer>
   <script src="app-core.js"></script>
   <script src="app-ui.js"></script>
 </body>
