@@ -147,7 +147,7 @@ document.getElementById("btnSaveDay").onclick = async function () {
     const st = studentById(duty);
     const star = by === "teacher" ? " *" : "";
     ok.textContent = "Збережено. Черговий: " + (st ? st.name : duty) + star +
-      (by === "teacher" ? " (призначив учитель)" : " (за розрахунком)");
+      " (призначений — підтвердження після 14:00)";
     ok.classList.remove("hidden");
     renderAll();
   } catch (e) {
@@ -252,6 +252,7 @@ document.getElementById("btnLoadDate").onclick = function () {
     info.innerHTML =
       "<p>Черговий: <strong>" + escapeHtml(dutyLabel(rec)) + "</strong></p>" +
       "<p class=\"muted\">Правило: " + escapeHtml(dutyRuleText(rec)) + "</p>" +
+      "<p class=\"muted\">Статус: " + escapeHtml(dutyStatusLabel(rec)) + "</p>" +
       "<p style=\"margin-top:8px\"><strong>Відсутні:</strong> " + escapeHtml(absentNames.join(", ") || "—") + "</p>" +
       "<p><strong>Присутні:</strong> " + escapeHtml(presentNames.join(", ") || "—") + "</p>";
   }
@@ -283,6 +284,33 @@ if (btnJumpToday) {
     highlightToday = true;
     renderMatrix();
   };
+}
+
+async function handleConfirmDuty(status) {
+  const err = document.getElementById("saveError");
+  const ok = document.getElementById("saveOk");
+  if (err) err.classList.add("hidden");
+  if (ok) ok.classList.add("hidden");
+  try {
+    await confirmDutyStatus(editDate, status);
+    if (ok) {
+      ok.textContent = status === "served"
+        ? "Підтверджено: прочергував (чергування зараховано)."
+        : "Відмічено: не прочергував (чергування не зараховано).";
+      ok.classList.remove("hidden");
+    }
+    renderAll();
+  } catch (e) {
+    if (err) { err.textContent = e.message; err.classList.remove("hidden"); }
+  }
+}
+var btnConfirmServed = document.getElementById("btnConfirmServed");
+var btnConfirmNoshow = document.getElementById("btnConfirmNoshow");
+if (btnConfirmServed) {
+  btnConfirmServed.onclick = function () { handleConfirmDuty("served"); };
+}
+if (btnConfirmNoshow) {
+  btnConfirmNoshow.onclick = function () { handleConfirmDuty("noshow"); };
 }
 
 loadData();
