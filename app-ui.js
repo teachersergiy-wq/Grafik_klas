@@ -329,5 +329,13 @@ if (cellModal) {
     if (e.target === cellModal) closeCellModal();
   });
 }
+var btnPctClose = document.getElementById("btnPctClose");
+var pctModal = document.getElementById("pctModal");
+if (btnPctClose) btnPctClose.onclick = function () { closePctModal(); };
+if (pctModal) {
+  pctModal.addEventListener("click", function (e) {
+    if (e.target === pctModal) closePctModal();
+  });
+}
 
 loadData();
