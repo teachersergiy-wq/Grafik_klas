@@ -206,7 +206,7 @@ document.getElementById("btnAddStudent").onclick = async function () {
   err.classList.add("hidden");
   if (!name) { err.textContent = "Вкажіть ім’я"; err.classList.remove("hidden"); return; }
   const id = String(Date.now());
-  data.students.push({ id: id, name: name, b: b, ch: ch });
+  data.students.push({ id: id, name: name, b0: b, ch0: ch, b: b, ch: ch });
   try {
     await saveData("Додано учня " + name);
     document.getElementById("newName").value = "";
