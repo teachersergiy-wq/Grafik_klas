@@ -1,1 +1,263 @@
-FILE_CONTENT_PLACEHOLDER
+<!DOCTYPE html>
+<html lang="uk" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>Чергування 8 клас</title>
+  <style>
+    :root, [data-theme="light"] {
+      --bg:#f5f7fa; --card:#fff; --primary:#2563eb; --primary-dark:#1d4ed8;
+      --danger:#dc2626; --success:#16a34a; --text:#1e293b; --muted:#64748b;
+      --border:#e2e8f0; --warn:#d97706; --today:#dbeafe; --cell:#f8fafc;
+      --ch:#2563eb; --b:#64748b;
+    }
+    [data-theme="dark"] {
+      --bg:#0f172a; --card:#1e293b; --primary:#3b82f6; --primary-dark:#60a5fa;
+      --danger:#f87171; --success:#4ade80; --text:#e2e8f0; --muted:#94a3b8;
+      --border:#334155; --warn:#fbbf24; --today:#1e3a5f; --cell:#0f172a;
+      --ch:#60a5fa; --b:#94a3b8;
+    }
+    [data-theme="color"] {
+      --bg:#fdf2f8; --card:#ffffff; --primary:#db2777; --primary-dark:#be185d;
+      --danger:#e11d48; --success:#059669; --text:#831843; --muted:#9d174d;
+      --border:#fbcfe8; --warn:#ea580c; --today:#fce7f3; --cell:#fff1f2;
+      --ch:#db2777; --b:#a21caf;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 16px; line-height: 1.45; background: var(--bg); color: var(--text); padding: 12px; max-width: 520px; margin: 0 auto; min-height: 100vh; }
+    h1 { font-size: 1.375rem; margin-bottom: 4px; }
+    h2 { font-size: 1.05rem; margin: 12px 0 8px; }
+    .muted { color: var(--muted); font-size: 0.9rem; }
+    .card { background: var(--card); border-radius: 12px; padding: 14px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.08); border: 1px solid var(--border); }
+    .top-bar { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+    .top-actions { display: flex; gap: 6px; flex-shrink: 0; }
+    .icon-btn { flex-shrink: 0; width: 48px; height: 48px; min-height: 48px; margin: 0; padding: 0; border-radius: 12px; background: var(--border); color: var(--text); font-size: 20px; display: flex; align-items: center; justify-content: center; border: none; cursor: pointer; }
+    .duty-big { font-size: 1.4rem; font-weight: 700; text-align: center; padding: 16px 12px; background: var(--today); border-radius: 12px; margin: 0; border: 1px solid var(--border); }
+    .duty-big .label { font-size: 0.85rem; font-weight: 500; color: var(--muted); display: block; margin-bottom: 4px; }
+    button { display: block; width: 100%; min-height: 48px; padding: 12px 16px; font-size: 16px; font-weight: 600; border: none; border-radius: 10px; cursor: pointer; margin-top: 8px; background: var(--primary); color: #fff; }
+    button:active { opacity: .9; }
+    button.secondary { background: var(--border); color: var(--text); }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+    input[type="text"], input[type="password"], input[type="number"], input[type="date"], select {
+      width: 100%; min-height: 48px; padding: 10px 12px; font-size: 16px; border: 1px solid var(--border); border-radius: 10px; margin-top: 6px; background: var(--card); color: var(--text);
+    }
+    label { display: block; margin-top: 12px; font-weight: 500; }
+    .role-badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; background: var(--today); color: var(--primary-dark); }
+    .hidden { display: none !important; }
+    .error { color: var(--danger); margin-top: 8px; }
+    .ok { color: var(--success); margin-top: 8px; }
+    .tabs { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+    .tabs button { flex: 1; min-width: 70px; margin-top: 0; background: var(--border); color: var(--text); }
+    .tabs button.active { background: var(--primary); color: #fff; }
+    footer { text-align: center; margin-top: 24px; color: var(--muted); font-size: 0.8rem; }
+    .hint-box { background: var(--today); border: 1px solid var(--border); border-radius: 10px; padding: 12px; margin-top: 12px; font-size: 0.9rem; }
+    .absent-row { display: flex; align-items: center; gap: 12px; padding: 12px; margin: 8px 0; border-radius: 10px; border: 2px solid var(--border); background: var(--cell); }
+    .absent-row.marked { border-color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, var(--card)); }
+    .absent-row input[type="checkbox"] { width: 28px; height: 28px; flex-shrink: 0; }
+    .absent-row .mark-label { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
+    .absent-row.marked .mark-label { color: var(--danger); font-weight: 600; }
+    .edit-panel { background: var(--cell); border-radius: 10px; padding: 12px; margin-top: 8px; border: 1px solid var(--border); }
+    .small-btn { width: auto; min-height: 40px; padding: 8px 12px; margin: 0; font-size: 14px; }
+    .auth-panel { margin-top: 8px; }
+    .week-nav { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+    .week-nav .icon-btn { width: 44px; height: 44px; min-height: 44px; }
+    .week-nav .week-label { flex: 1; text-align: center; font-weight: 600; font-size: 0.95rem; }
+    .matrix-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    table.matrix { width: 100%; border-collapse: collapse; table-layout: fixed; min-width: 360px; font-size: 0.85rem; }
+    table.matrix col.name-col { width: 28%; }
+    table.matrix col.pct-col { width: 12%; }
+    table.matrix col.day-col { width: 12%; }
+    table.matrix th, table.matrix td { border: 1px solid var(--border); padding: 6px 4px; text-align: center; overflow: hidden; }
+    table.matrix th { background: var(--cell); font-weight: 600; font-size: 0.75rem; color: var(--muted); }
+    table.matrix th.today-col { background: var(--today); color: var(--primary-dark); }
+    table.matrix td.today-col { background: var(--today); }
+    table.matrix td.name { text-align: left; padding-left: 8px; font-weight: 500; white-space: nowrap; max-width: 110px; overflow: hidden; text-overflow: ellipsis; }
+    table.matrix td.pct { color: var(--primary-dark); font-weight: 600; min-width: 48px; font-size: 0.72rem; }
+    table.matrix .mark-ch { color: #854d0e; font-weight: 800; font-size: 0.95rem; }
+    table.matrix .mark-ch-noshow { color: #991b1b; font-weight: 800; font-size: 0.95rem; }
+    table.matrix .mark-b { color: var(--b); font-weight: 600; }
+    table.matrix .mark-n { color: #64748b; font-weight: 600; }
+    table.matrix td.cell-ch { background: #fef9c3 !important; }
+    table.matrix td.cell-ch-noshow { background: #fecaca !important; }
+    table.matrix td.cell-n { background: #e2e8f0 !important; }
+    [data-theme="dark"] table.matrix td.cell-n { background: #334155 !important; }
+    [data-theme="dark"] table.matrix td.cell-ch { background: #713f12 !important; }
+    [data-theme="dark"] table.matrix td.cell-ch-noshow { background: #7f1d1d !important; }
+    [data-theme="dark"] table.matrix .mark-ch { color: #fde68a; }
+    [data-theme="dark"] table.matrix .mark-ch-noshow { color: #fecaca; }
+    [data-theme="color"] table.matrix td.cell-ch { background: #fef3c7 !important; }
+    [data-theme="color"] table.matrix td.cell-ch-noshow { background: #fecdd3 !important; }
+    [data-theme="color"] table.matrix td.cell-n { background: #f1f5f9 !important; }
+    .legend { font-size: 0.72rem; color: var(--muted); margin-top: 8px; }
+    .student-row { display: flex; align-items: center; gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+    .student-row:last-child { border-bottom: none; }
+    .student-name { flex: 1; }
+    .alert-banner { background: color-mix(in srgb, var(--warn) 15%, var(--card)); border: 2px solid var(--warn); border-radius: 12px; padding: 14px; margin-bottom: 12px; }
+    .alert-banner strong { display: block; font-size: 1.05rem; color: var(--warn); margin-bottom: 4px; }
+    .draft-banner { background: color-mix(in srgb, var(--success) 15%, var(--card)); border: 2px solid var(--success); border-radius: 12px; padding: 14px; margin-bottom: 12px; }
+    .draft-banner button { margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <div class="top-bar">
+    <div>
+      <h1>Чергування 8 клас</h1>
+      <p class="muted" id="todayLabel"></p>
+    </div>
+    <div class="top-actions">
+      <button type="button" class="icon-btn" id="btnTheme" title="Тема" aria-label="Змінити тему">🎨</button>
+      <button type="button" class="icon-btn" id="btnToggleLogin" title="Вхід" aria-label="Вхід">🔒</button>
+    </div>
+  </div>
+
+  <div id="authSection" class="card hidden auth-panel">
+    <div id="loggedOut">
+      <p><strong>Вхід для вчителя або старости</strong></p>
+      <label>Логін</label>
+      <input type="text" id="loginInput" placeholder="starosta або teacher" autocomplete="username">
+      <label>Пароль</label>
+      <input type="password" id="passInput" placeholder="Пароль" autocomplete="current-password">
+      <button type="button" id="btnLogin">Увійти</button>
+      <p class="error hidden" id="loginError"></p>
+    </div>
+    <div id="loggedIn" class="hidden">
+      <p>Ви: <strong id="userLogin"></strong> <span class="role-badge" id="userRole"></span></p>
+      <button type="button" class="secondary" id="btnLogout">Вийти</button>
+    </div>
+  </div>
+
+  <div id="lateBanner" class="alert-banner hidden">
+    <strong id="lateTitle">Увага</strong>
+    <span id="lateText"></span>
+  </div>
+
+  <div id="draftBanner" class="draft-banner hidden">
+    <strong>Є незбережена чернетка</strong>
+    <p class="muted" id="draftText" style="margin-top:4px"></p>
+    <button type="button" id="btnSendDraft">Надіслати чернетку зараз</button>
+    <button type="button" class="secondary" id="btnDiscardDraft">Видалити чернетку</button>
+  </div>
+
+  <div class="card">
+    <div class="duty-big">
+      <span class="label">Сьогодні черговий</span>
+      <span id="dutyName">—</span>
+    </div>
+    <p class="muted" id="dutyHint" style="margin-top:8px"></p>
+  </div>
+
+  <div class="card" id="matrixCard">
+    <div class="week-nav">
+      <button type="button" class="icon-btn" id="btnWeekPrev" title="Попередній тиждень" aria-label="Попередній тиждень">◀</button>
+      <div class="week-label" id="weekLabel">Тиждень</div>
+      <button type="button" class="icon-btn" id="btnWeekNext" title="Наступний тиждень" aria-label="Наступний тиждень">▶</button>
+    </div>
+    <div class="matrix-wrap">
+      <table class="matrix" id="matrixTable">
+        <colgroup>
+          <col class="name-col">
+          <col class="pct-col">
+          <col class="day-col">
+          <col class="day-col">
+          <col class="day-col">
+          <col class="day-col">
+          <col class="day-col">
+        </colgroup>
+        <thead></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <p class="legend"><strong>ч</strong> (жовт.) — призначений / прочергував · <strong>ч</strong> (черв.) — не прочергував · <strong>б</strong> — був · <strong>н</strong> — не був · порожньо — немає запису</p>
+    <button type="button" class="secondary" id="btnJumpToday" style="margin-top:10px">Сьогодні</button>
+  </div>
+
+  <div id="editorSection" class="hidden">
+    <div id="tokenSetupCard" class="card hidden">
+      <h2>Токен для збереження</h2>
+      <p class="muted">Щоб зберігати дані, один раз вставте токен GitHub (Contents: Read and write). Лишається лише на цьому телефоні.</p>
+      <label>Токен</label>
+      <input type="password" id="writeTokenInputShared" placeholder="github_pat_... або ghp_..." autocomplete="off">
+      <button type="button" id="btnSaveTokenShared">Зберегти токен на цьому телефоні</button>
+      <p class="ok hidden" id="tokenSharedOk"></p>
+      <p class="error hidden" id="tokenSharedErr"></p>
+      <p class="muted" id="tokenSharedStatus" style="margin-top:8px"></p>
+    </div>
+    <div class="tabs">
+      <button type="button" class="active" data-tab="today">Сьогодні</button>
+      <button type="button" data-tab="students" id="tabStudentsBtn">Учні</button>
+      <button type="button" data-tab="history" id="tabHistoryBtn">Історія</button>
+      <button type="button" data-tab="settings" id="tabSettingsBtn">Налашт.</button>
+    </div>
+    <div id="tab-today" class="card">
+      <h2>Присутність на <span id="editDateLabel"></span></h2>
+      <p class="muted" id="timeWindowHint"></p>
+      <div class="hint-box">Поставте галочку біля учня, якщо він <strong>відсутній</strong>. Без галочки — присутній.</div>
+      <div id="absentList"></div>
+      <div id="dutyPickBlock" class="hidden" style="margin-top:12px">
+        <h2 style="margin-top:8px">Черговий</h2>
+        <p class="muted" id="dutyAutoHint"></p>
+        <label>Призначити чергового з присутніх</label>
+        <select id="dutySelect"></select>
+        <p class="muted" style="margin-top:6px">Вручну (не за розрахунком) — біля імені буде *</p>
+      </div>
+      <button type="button" id="btnSaveDay">Зберегти присутність і призначити чергового</button>
+      <button type="button" class="secondary hidden" id="btnClearDay">Скасувати запис за день</button>
+      <div id="confirmDutyBlock" class="hidden" style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">
+        <h2 style="margin-top:0">Підтвердження чергування</h2>
+        <p class="muted" id="confirmDutyHint"></p>
+        <p id="confirmDutyName" style="font-weight:700;margin:8px 0"></p>
+        <button type="button" id="btnConfirmServed">Прочергував</button>
+        <button type="button" class="secondary" id="btnConfirmNoshow">Не прочергував</button>
+      </div>
+      <p class="error hidden" id="saveError"></p>
+      <p class="ok hidden" id="saveOk"></p>
+    </div>
+    <div id="tab-students" class="card hidden">
+      <h2>Список учнів</h2>
+      <p class="muted" id="studentsHint"></p>
+      <div id="studentsManage"></div>
+      <button type="button" id="btnShowAddStudent" class="secondary">Додати учня</button>
+      <div id="addStudentForm" class="hidden">
+        <h2 style="margin-top:12px">Новий учень</h2>
+        <label>Ім’я (Прізвище І.)</label>
+        <input type="text" id="newName" placeholder="Петренко О.">
+        <label>Днів у школі (b)</label>
+        <input type="number" id="newB" value="0" min="0">
+        <label>Разів чергував (ch)</label>
+        <input type="number" id="newCh" value="0" min="0">
+        <button type="button" id="btnAddStudent">Зберегти учня</button>
+        <button type="button" class="secondary" id="btnCancelAddStudent">Скасувати</button>
+        <p class="error hidden" id="studError"></p>
+      </div>
+    </div>
+    <div id="tab-history" class="card hidden">
+      <h2>Історія / інша дата</h2>
+      <label>Дата</label>
+      <input type="date" id="histDate">
+      <button type="button" class="secondary" id="btnLoadDate">Відкрити дату</button>
+      <div id="histInfo" style="margin-top:12px"></div>
+    </div>
+    <div id="tab-settings" class="card hidden">
+      <h2>Налаштування (лише вчитель)</h2>
+      <p class="muted">Токен GitHub для збереження даних (Contents: Read and write).</p>
+      <label>Токен для збереження</label>
+      <input type="password" id="writeTokenInput" placeholder="github_pat_..." autocomplete="off">
+      <button type="button" id="btnSaveToken">Зберегти токен на цьому телефоні</button>
+      <p class="ok hidden" id="tokenOk"></p>
+      <p class="error hidden" id="tokenErr"></p>
+      <p class="muted" id="tokenStatus" style="margin-top:8px"></p>
+      <h2 style="margin-top:20px">Паролі</h2>
+      <label>Новий пароль вчителя</label>
+      <input type="password" id="newTeacherPass" placeholder="Порожньо = не змінювати">
+      <label>Новий пароль старости</label>
+      <input type="password" id="newStarostaPass" placeholder="Порожньо = не змінювати">
+      <button type="button" id="btnSavePasswords">Змінити паролі</button>
+      <p class="ok hidden" id="passOk"></p>
+      <p class="error hidden" id="passErr"></p>
+    </div>
+  </div>
+
+  <script src="app-core.js"></script>
+  <script src="app-ui.js"></script>
+</body>
+</html>
