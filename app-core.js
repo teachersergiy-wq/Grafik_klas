@@ -85,6 +85,7 @@ async function loadData() {
       data = { students: [], days: {} };
     }
   }
+  migrateStudentStats();
   renderAll();
   trySendDraft();
 }
@@ -114,9 +115,48 @@ async function saveData(msg) {
 function studentById(id) {
   return data.students.find(function (s) { return s.id === id; });
 }
+function scheduleStats(studentId) {
+  let b = 0, ch = 0;
+  const days = data.days || {};
+  Object.keys(days).forEach(function (date) {
+    const rec = days[date];
+    if (!rec) return;
+    const abs = rec.absent || [];
+    if (abs.indexOf(studentId) < 0) b += 1;
+    if (rec.duty === studentId && dutyCountsInCh(rec)) ch += 1;
+  });
+  return { b: b, ch: ch };
+}
+function pastB(s) {
+  if (s.b0 != null && s.b0 !== undefined) return Number(s.b0) || 0;
+  return Number(s.b) || 0;
+}
+function pastCh(s) {
+  if (s.ch0 != null && s.ch0 !== undefined) return Number(s.ch0) || 0;
+  return Number(s.ch) || 0;
+}
+function totalB(s) {
+  return pastB(s) + scheduleStats(s.id).b;
+}
+function totalCh(s) {
+  return pastCh(s) + scheduleStats(s.id).ch;
+}
 function calcPct(s) {
-  if (!s.b || s.b <= 0) return s.ch > 0 ? 1 : 0;
-  return s.ch / s.b;
+  const b = totalB(s);
+  const ch = totalCh(s);
+  if (!b || b <= 0) return ch > 0 ? 1 : 0;
+  return ch / b;
+}
+function migrateStudentStats() {
+  if (!data.students) return;
+  data.students.forEach(function (s) {
+    if (s.b0 != null && s.ch0 != null) return;
+    const sch = scheduleStats(s.id);
+    const tb = Number(s.b) || 0;
+    const tc = Number(s.ch) || 0;
+    s.b0 = Math.max(0, tb - sch.b);
+    s.ch0 = Math.max(0, tc - sch.ch);
+  });
 }
 function pickDuty(absentIds) {
   const present = data.students.filter(function (s) { return absentIds.indexOf(s.id) < 0; });
@@ -124,7 +164,8 @@ function pickDuty(absentIds) {
   present.sort(function (a, b) {
     const pa = calcPct(a), pb = calcPct(b);
     if (Math.abs(pa - pb) > 1e-9) return pa - pb;
-    if (a.ch !== b.ch) return a.ch - b.ch;
+    const ca = totalCh(a), cb = totalCh(b);
+    if (ca !== cb) return ca - cb;
     return a.name.localeCompare(b.name, "uk");
   });
   return present[0].id;
@@ -214,7 +255,6 @@ function dateToIsoLocal(d) {
   const da = String(d.getDate()).padStart(2, "0");
   return y + "-" + mo + "-" + da;
 }
-
 function weekMondayWithOffset(offset) {
   const mon = mondayOfWeekKyiv();
   mon.setDate(mon.getDate() + offset * 7);
@@ -234,9 +274,7 @@ function renderMatrix() {
     d.setDate(mon.getDate() + i);
     days.push(dateToIsoLocal(d));
   }
-  if (label) {
-    label.textContent = formatDateUk(days[0]) + " – " + formatDateUk(days[4]);
-  }
+  if (label) label.textContent = formatDateUk(days[0]) + " – " + formatDateUk(days[4]);
   const thead = table.querySelector("thead");
   const tbody = table.querySelector("tbody");
   let head = "<tr><th>Учень</th><th>%</th>";
@@ -247,7 +285,6 @@ function renderMatrix() {
   }
   head += "</tr>";
   thead.innerHTML = head;
-
   if (!data.students.length) {
     tbody.innerHTML = '<tr><td colspan="7" class="muted">Учнів ще немає</td></tr>';
     return;
@@ -476,7 +513,7 @@ function renderAuth() {
   document.getElementById("tabStudentsBtn").classList.toggle("hidden", !isTeacher);
   document.getElementById("tabHistoryBtn").classList.toggle("hidden", !isTeacher);
   document.getElementById("tabSettingsBtn").classList.toggle("hidden", !isTeacher);
-  document.getElementById("studentsHint").textContent = "Можна змінити ім’я, дні в школі та кількість чергувань.";
+  document.getElementById("studentsHint").textContent = "Минулі роки можна редагувати. За 8 клас — з графіка. Разом = сума.";
   const tokenCard = document.getElementById("tokenSetupCard");
   if (tokenCard) {
     if ((isTeacher || isHead) && !token) tokenCard.classList.remove("hidden");
@@ -644,18 +681,29 @@ function renderStudentsManage() {
     return a.name.localeCompare(b.name, "uk");
   });
   sm.innerHTML = sorted.map(function (s) {
+    const sch = scheduleStats(s.id);
+    const pb = pastB(s);
+    const pc = pastCh(s);
+    const tb = pb + sch.b;
+    const tc = pc + sch.ch;
     const pct = (calcPct(s) * 100).toFixed(1);
     let html = '<div class="student-row" style="flex-wrap:wrap">' +
       '<span class="student-name"><strong>' + escapeHtml(s.name) + "</strong>" +
-      '<span class="muted" style="display:block;font-size:0.85rem">' + s.ch + " черг. / " + s.b + " дн. (" + pct + "%)</span></span>";
+      '<span class="muted" style="display:block;font-size:0.85rem">Разом: ' + tc + " черг. / " + tb + " дн. (" + pct + "%)</span></span>";
     html += '<button type="button" class="secondary small-btn" data-edit="' + s.id + '">Змінити</button>';
     html += '<button type="button" class="secondary small-btn" data-del="' + s.id + '">Видалити</button>';
     html += "</div>";
     if (editingId === s.id) {
       html += '<div class="edit-panel" data-edit-panel="' + s.id + '">' +
-        "<label>Ім’я</label><input type=\"text\" data-f=\"name\" value=\"" + escapeHtml(s.name) + "\">" +
-        "<label>Днів у школі (b)</label><input type=\"number\" data-f=\"b\" min=\"0\" value=\"" + (s.b || 0) + "\">" +
-        "<label>Разів чергував (ch)</label><input type=\"number\" data-f=\"ch\" min=\"0\" value=\"" + (s.ch || 0) + "\">" +
+        '<label>Ім’я</label><input type="text" data-f="name" value="' + escapeHtml(s.name) + '">' +
+        '<p class="muted" style="margin-top:12px;margin-bottom:4px"><strong>Минулі роки</strong> (можна змінити)</p>' +
+        '<label>Днів у школі за минулі роки</label><input type="number" data-f="b0" min="0" value="' + pb + '">' +
+        '<label>Чергувань за минулі роки</label><input type="number" data-f="ch0" min="0" value="' + pc + '">' +
+        '<p class="muted" style="margin-top:12px;margin-bottom:4px"><strong>За графіком 8 класу</strong> (з таблиці, лише перегляд)</p>' +
+        '<p>Днів присутності: <strong>' + sch.b + '</strong></p>' +
+        '<p>Чергувань (підтверджених): <strong>' + sch.ch + '</strong></p>' +
+        '<p class="muted" style="margin-top:12px;margin-bottom:4px"><strong>Разом</strong></p>' +
+        '<p>Днів: <strong>' + tb + '</strong> · Чергувань: <strong>' + tc + '</strong> · Відсоток: <strong>' + pct + '</strong></p>' +
         '<button type="button" class="small-btn" data-save-edit="' + s.id + '">Зберегти зміни</button>' +
         '<button type="button" class="secondary small-btn" data-cancel-edit="' + s.id + '">Скасувати</button>' +
         '<p class="error hidden" data-edit-err="' + s.id + '"></p></div>';
@@ -681,30 +729,34 @@ async function saveStudentEdit(id) {
   const panel = document.querySelector('[data-edit-panel="' + id + '"]');
   if (!panel) return;
   const name = panel.querySelector('[data-f="name"]').value.trim();
-  const b = parseInt(panel.querySelector('[data-f="b"]').value, 10);
-  const ch = parseInt(panel.querySelector('[data-f="ch"]').value, 10);
+  const b0 = parseInt(panel.querySelector('[data-f="b0"]').value, 10);
+  const ch0 = parseInt(panel.querySelector('[data-f="ch0"]').value, 10);
   const err = panel.querySelector('[data-edit-err="' + id + '"]');
   err.classList.add("hidden");
   if (!name) { err.textContent = "Вкажіть ім’я"; err.classList.remove("hidden"); return; }
-  if (isNaN(b) || b < 0 || isNaN(ch) || ch < 0) {
+  if (isNaN(b0) || b0 < 0 || isNaN(ch0) || ch0 < 0) {
     err.textContent = "Числа мають бути 0 або більше"; err.classList.remove("hidden"); return;
   }
   const st = studentById(id);
   if (!st) return;
-  const old = { name: st.name, b: st.b, ch: st.ch };
-  st.name = name; st.b = b; st.ch = ch;
+  const old = { name: st.name, b0: st.b0, ch0: st.ch0, b: st.b, ch: st.ch };
+  st.name = name;
+  st.b0 = b0;
+  st.ch0 = ch0;
+  const sch = scheduleStats(id);
+  st.b = b0 + sch.b;
+  st.ch = ch0 + sch.ch;
   try {
     await saveData("Оновлено учня " + name);
     editingId = null;
     renderAll();
   } catch (e) {
-    st.name = old.name; st.b = old.b; st.ch = old.ch;
+    st.name = old.name; st.b0 = old.b0; st.ch0 = old.ch0; st.b = old.b; st.ch = old.ch;
     err.textContent = e.message; err.classList.remove("hidden");
   }
 }
 
 let cellEdit = null;
-
 function closeCellModal() {
   cellEdit = null;
   const m = document.getElementById("cellModal");
@@ -882,22 +934,9 @@ function renderAll() {
 }
 
 function applyDay(rec) {
-  const absent = {};
-  (rec.absent || []).forEach(function (id) { absent[id] = true; });
-  const countCh = dutyCountsInCh(rec);
-  data.students.forEach(function (s) {
-    if (!absent[s.id]) s.b = (s.b || 0) + 1;
-    if (countCh && s.id === rec.duty) s.ch = (s.ch || 0) + 1;
-  });
+  // Відвідуваність і чергування за 8 клас рахуються з data.days (scheduleStats).
 }
 function reverseDay(rec) {
-  const absent = {};
-  (rec.absent || []).forEach(function (id) { absent[id] = true; });
-  const countCh = dutyCountsInCh(rec);
-  data.students.forEach(function (s) {
-    if (!absent[s.id]) s.b = Math.max(0, (s.b || 0) - 1);
-    if (countCh && s.id === rec.duty) s.ch = Math.max(0, (s.ch || 0) - 1);
-  });
 }
 
 async function applyAndSaveDay(date, absent, duty, by, msg) {
