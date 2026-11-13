@@ -101,6 +101,7 @@
     [data-theme="neon"] table.matrix td.cell-n { background: #a5b4fc !important; }
     .legend { font-size: 0.72rem; color: var(--muted); margin-top: 8px; }
     table.matrix td.clickable { cursor: pointer; }
+    table.matrix td.pct { cursor: pointer; text-decoration: underline; text-decoration-style: dotted; }
     table.matrix td.clickable:active { opacity: 0.85; }
     table.matrix .mark-note { font-size: 0.65rem; vertical-align: super; color: #0369a1; }
     .cell-modal-backdrop {
@@ -251,9 +252,9 @@
         <h2 style="margin-top:12px">Новий учень</h2>
         <label>Ім’я (Прізвище І.)</label>
         <input type="text" id="newName" placeholder="Петренко О.">
-        <label>Днів у школі (b)</label>
+        <label>Днів у школі за минулі роки</label>
         <input type="number" id="newB" value="0" min="0">
-        <label>Разів чергував (ch)</label>
+        <label>Чергувань за минулі роки</label>
         <input type="number" id="newCh" value="0" min="0">
         <button type="button" id="btnAddStudent">Зберегти учня</button>
         <button type="button" class="secondary" id="btnCancelAddStudent">Скасувати</button>
@@ -287,6 +288,15 @@
     </div>
   </div>
 
+  <div id="pctModal" class="cell-modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="cell-modal">
+      <h2 id="pctModalTitle">Відсоток</h2>
+      <div id="pctModalBody"></div>
+      <div class="actions">
+        <button type="button" class="secondary" id="btnPctClose">Закрити</button>
+      </div>
+    </div>
+  </div>
   <div id="cellModal" class="cell-modal-backdrop hidden" role="dialog" aria-modal="true">
     <div class="cell-modal">
       <h2 id="cellModalTitle">Клітинка</h2>
