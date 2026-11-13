@@ -136,13 +136,48 @@ function isManualDuty(rec) {
 function dutyLabel(rec) {
   if (!rec || !rec.duty) return "—";
   const st = studentById(rec.duty);
-  const name = st ? st.name : ("id " + rec.duty);
-  return isManualDuty(rec) ? (name + " *") : name;
+  let name = st ? st.name : ("id " + rec.duty);
+  if (isManualDuty(rec)) name += " *";
+  const ds = dutyStatusOf(rec);
+  if (ds === "noshow") name += " (не прочергував)";
+  else if (ds === "assigned") name += " (призначений)";
+  return name;
 }
 function dutyRuleText(rec) {
   if (!rec || !rec.duty) return "";
   if (isManualDuty(rec)) return "призначив учитель *";
   return "за відсотковим розрахунком";
+}
+/** assigned | served | noshow ; старі записи без поля = served */
+function dutyStatusOf(rec) {
+  if (!rec || !rec.duty) return null;
+  if (rec.dutyStatus === "assigned" || rec.dutyStatus === "served" || rec.dutyStatus === "noshow") {
+    return rec.dutyStatus;
+  }
+  return "served";
+}
+function dutyCountsInCh(rec) {
+  return dutyStatusOf(rec) === "served";
+}
+function isAfterConfirmTimeKyiv() {
+  const n = kyivNow();
+  return n.getHours() * 60 + n.getMinutes() >= 14 * 60;
+}
+function canConfirmDuty(date) {
+  if (role !== "teacher") return false;
+  const rec = dayRecord(date);
+  if (!rec || !rec.duty) return false;
+  if (dutyStatusOf(rec) !== "assigned") return false;
+  if (date < todayStr()) return true;
+  if (date === todayStr()) return isAfterConfirmTimeKyiv();
+  return false;
+}
+function dutyStatusLabel(rec) {
+  const st = dutyStatusOf(rec);
+  if (st === "assigned") return "призначений (ще не підтверджено)";
+  if (st === "served") return "прочергував";
+  if (st === "noshow") return "не прочергував";
+  return "";
 }
 function escapeHtml(s) {
   const amp = String.fromCharCode(38) + "amp;";
@@ -224,8 +259,14 @@ function renderMatrix() {
       if (rec && rec.duty) {
         const abs = rec.absent || [];
         if (rec.duty === s.id) {
-          mark = '<span class="mark-ch">ч</span>';
-          cellCls = (cellCls ? cellCls + " " : "") + "cell-ch";
+          const st = dutyStatusOf(rec);
+          if (st === "noshow") {
+            mark = '<span class="mark-ch-noshow">ч</span>';
+            cellCls = (cellCls ? cellCls + " " : "") + "cell-ch-noshow";
+          } else {
+            mark = '<span class="mark-ch">ч</span>';
+            cellCls = (cellCls ? cellCls + " " : "") + "cell-ch";
+          }
         } else if (abs.indexOf(s.id) >= 0) {
           mark = '<span class="mark-n">н</span>';
           cellCls = (cellCls ? cellCls + " " : "") + "cell-n";
@@ -266,7 +307,7 @@ async function quickChangeDuty(date) {
   const newId = present[idx].id;
   if (newId === rec.duty) return;
   reverseDay(rec);
-  const next = { absent: absent.slice(), duty: newId, by: "teacher" };
+  const next = { absent: absent.slice(), duty: newId, by: "teacher", dutyStatus: "assigned" };
   data.days[date] = next;
   applyDay(next);
   try {
@@ -297,6 +338,8 @@ function renderDuty() {
     });
     let t2 = abs.length ? "Відсутні: " + abs.join(", ") : "Усі присутні";
     t2 += " · " + dutyRuleText(rec);
+    const stl = dutyStatusLabel(rec);
+    if (stl) t2 += " · " + stl;
     hint.textContent = t2;
   }
 }
@@ -495,6 +538,30 @@ function renderEditor() {
   document.getElementById("btnClearDay").classList.toggle("hidden", !(role === "teacher" && dayRecord(editDate)));
   document.getElementById("saveError").classList.add("hidden");
   document.getElementById("saveOk").classList.add("hidden");
+  const conf = document.getElementById("confirmDutyBlock");
+  if (conf) {
+    const recNow = dayRecord(editDate);
+    const showConf = role === "teacher" && recNow && recNow.duty && dutyStatusOf(recNow) === "assigned";
+    conf.classList.toggle("hidden", !showConf);
+    if (showConf) {
+      const st = studentById(recNow.duty);
+      const nameEl = document.getElementById("confirmDutyName");
+      const hintEl = document.getElementById("confirmDutyHint");
+      if (nameEl) nameEl.textContent = st ? st.name : ("id " + recNow.duty);
+      let ht = "Підтвердіть, чи учень справді прочергував.";
+      if (editDate === todayStr() && !isAfterConfirmTimeKyiv()) {
+        ht = "Підтвердження доступне після 14:00 за київським часом.";
+      } else if (editDate > todayStr()) {
+        ht = "Підтвердження для майбутньої дати недоступне.";
+      }
+      if (hintEl) hintEl.textContent = ht;
+      const okTime = canConfirmDuty(editDate);
+      const b1 = document.getElementById("btnConfirmServed");
+      const b2 = document.getElementById("btnConfirmNoshow");
+      if (b1) b1.disabled = !okTime;
+      if (b2) b2.disabled = !okTime;
+    }
+  }
   if (role === "teacher") renderStudentsManage();
   document.getElementById("histDate").value = editDate;
 }
@@ -618,24 +685,26 @@ function renderAll() {
 function applyDay(rec) {
   const absent = {};
   (rec.absent || []).forEach(function (id) { absent[id] = true; });
+  const countCh = dutyCountsInCh(rec);
   data.students.forEach(function (s) {
     if (!absent[s.id]) s.b = (s.b || 0) + 1;
-    if (s.id === rec.duty) s.ch = (s.ch || 0) + 1;
+    if (countCh && s.id === rec.duty) s.ch = (s.ch || 0) + 1;
   });
 }
 function reverseDay(rec) {
   const absent = {};
   (rec.absent || []).forEach(function (id) { absent[id] = true; });
+  const countCh = dutyCountsInCh(rec);
   data.students.forEach(function (s) {
     if (!absent[s.id]) s.b = Math.max(0, (s.b || 0) - 1);
-    if (s.id === rec.duty) s.ch = Math.max(0, (s.ch || 0) - 1);
+    if (countCh && s.id === rec.duty) s.ch = Math.max(0, (s.ch || 0) - 1);
   });
 }
 
 async function applyAndSaveDay(date, absent, duty, by, msg) {
   const prev = dayRecord(date);
   if (prev) reverseDay(prev);
-  data.days[date] = { absent: absent, duty: duty, by: by || "auto" };
+  data.days[date] = { absent: absent, duty: duty, by: by || "auto", dutyStatus: "assigned" };
   applyDay(data.days[date]);
   try {
     await saveData(msg || ("Присутність і черговий за " + date));
@@ -643,6 +712,36 @@ async function applyAndSaveDay(date, absent, duty, by, msg) {
     reverseDay(data.days[date]);
     if (prev) { data.days[date] = prev; applyDay(prev); }
     else delete data.days[date];
+    throw e;
+  }
+}
+
+async function confirmDutyStatus(date, status) {
+  if (role !== "teacher") throw new Error("Лише вчитель підтверджує чергування");
+  const rec = dayRecord(date);
+  if (!rec || !rec.duty) throw new Error("Немає призначеного чергового");
+  if (dutyStatusOf(rec) !== "assigned") throw new Error("Чергування вже підтверджено");
+  if (date === todayStr() && !isAfterConfirmTimeKyiv()) {
+    throw new Error("Підтвердження можливе після 14:00 (Київ)");
+  }
+  if (status !== "served" && status !== "noshow") throw new Error("Невірний статус");
+  reverseDay(rec);
+  const next = {
+    absent: (rec.absent || []).slice(),
+    duty: rec.duty,
+    by: rec.by || "auto",
+    dutyStatus: status
+  };
+  data.days[date] = next;
+  applyDay(next);
+  try {
+    await saveData(status === "served"
+      ? ("Підтверджено чергування за " + date)
+      : ("Не прочергував за " + date));
+  } catch (e) {
+    reverseDay(next);
+    data.days[date] = rec;
+    applyDay(rec);
     throw e;
   }
 }
