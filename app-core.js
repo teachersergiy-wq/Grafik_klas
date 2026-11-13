@@ -296,7 +296,7 @@ function renderMatrix() {
   const editable = (role === "teacher" || role === "head");
   tbody.innerHTML = sorted.map(function (s) {
     const pct = (calcPct(s) * 100).toFixed(2);
-    let row = '<tr><td class="name">' + escapeHtml(s.name) + '</td><td class="pct">' + pct + "</td>";
+    let row = '<tr><td class="name">' + escapeHtml(s.name) + '</td><td class="pct" data-sid="' + s.id + '" title="Натисніть — розрахунок">' + pct + "</td>";
     for (let i = 0; i < 5; i++) {
       const isToday = highlightToday && days[i] === today;
       const rec = recs[i];
@@ -335,6 +335,12 @@ function renderMatrix() {
       };
     });
   }
+  tbody.querySelectorAll("td.pct[data-sid]").forEach(function (td) {
+    td.onclick = function (e) {
+      e.stopPropagation();
+      openPctModal(td.getAttribute("data-sid"));
+    };
+  });
 }
 
 function renderWeek() { renderMatrix(); }
@@ -756,6 +762,44 @@ async function saveStudentEdit(id) {
   }
 }
 
+function closePctModal() {
+  const m = document.getElementById("pctModal");
+  if (m) m.classList.add("hidden");
+}
+function openPctModal(sid) {
+  const st = studentById(sid);
+  if (!st) return;
+  const sch = scheduleStats(sid);
+  const pb = pastB(st);
+  const pc = pastCh(st);
+  const tb = pb + sch.b;
+  const tc = pc + sch.ch;
+  const pct = (calcPct(st) * 100).toFixed(2);
+  const title = document.getElementById("pctModalTitle");
+  const body = document.getElementById("pctModalBody");
+  if (title) title.textContent = st.name;
+  if (body) {
+    let html = "";
+    html += '<p class="muted" style="margin-bottom:10px">Відсоток = чергування ÷ дні в школі</p>';
+    html += '<p style="font-size:1.25rem;font-weight:700;margin-bottom:12px">' + pct + ' = ' + tc + ' ÷ ' + tb + '</p>';
+    html += '<p><strong>Минулі роки</strong></p>';
+    html += '<p class="muted">Днів у школі: <strong style="color:var(--text)">' + pb + '</strong></p>';
+    html += '<p class="muted" style="margin-bottom:10px">Чергувань: <strong style="color:var(--text)">' + pc + '</strong></p>';
+    html += '<p><strong>За графіком 8 класу</strong></p>';
+    html += '<p class="muted">Днів присутності: <strong style="color:var(--text)">' + sch.b + '</strong></p>';
+    html += '<p class="muted" style="margin-bottom:10px">Чергувань (підтверджених «прочергував»): <strong style="color:var(--text)">' + sch.ch + '</strong></p>';
+    html += '<p><strong>Разом</strong></p>';
+    html += '<p class="muted">Днів: <strong style="color:var(--text)">' + tb + '</strong> = ' + pb + ' + ' + sch.b + '</p>';
+    html += '<p class="muted">Чергувань: <strong style="color:var(--text)">' + tc + '</strong> = ' + pc + ' + ' + sch.ch + '</p>';
+    if (!tb) {
+      html += '<p class="muted" style="margin-top:10px">Поки немає днів у школі — відсоток умовно 0 (або 100, якщо вже є чергування без днів).</p>';
+    }
+    body.innerHTML = html;
+  }
+  const m = document.getElementById("pctModal");
+  if (m) m.classList.remove("hidden");
+}
+
 let cellEdit = null;
 function closeCellModal() {
   cellEdit = null;
@@ -934,7 +978,6 @@ function renderAll() {
 }
 
 function applyDay(rec) {
-  // Відвідуваність і чергування за 8 клас рахуються з data.days (scheduleStats).
 }
 function reverseDay(rec) {
 }
