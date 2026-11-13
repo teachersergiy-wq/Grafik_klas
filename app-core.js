@@ -166,7 +166,6 @@ function canConfirmDuty(date) {
   if (role !== "teacher") return false;
   const rec = dayRecord(date);
   if (!rec || !rec.duty) return false;
-  if (dutyStatusOf(rec) !== "assigned") return false;
   if (date < todayStr()) return true;
   if (date === todayStr()) return isAfterConfirmTimeKyiv();
   return false;
@@ -450,7 +449,6 @@ function renderAuth() {
   const out = document.getElementById("loggedOut");
   const inn = document.getElementById("loggedIn");
   const lockBtn = document.getElementById("btnToggleLogin");
-
   if (userLogin && role !== "viewer") {
     out.classList.add("hidden");
     inn.classList.remove("hidden");
@@ -470,21 +468,16 @@ function renderAuth() {
     if (loginOpen) auth.classList.remove("hidden");
     else auth.classList.add("hidden");
   }
-
   const isTeacher = role === "teacher";
   const isHead = role === "head";
   document.getElementById("tabStudentsBtn").classList.toggle("hidden", !isTeacher);
   document.getElementById("tabHistoryBtn").classList.toggle("hidden", !isTeacher);
   document.getElementById("tabSettingsBtn").classList.toggle("hidden", !isTeacher);
   document.getElementById("studentsHint").textContent = "Можна змінити ім’я, дні в школі та кількість чергувань.";
-
   const tokenCard = document.getElementById("tokenSetupCard");
   if (tokenCard) {
-    if ((isTeacher || isHead) && !token) {
-      tokenCard.classList.remove("hidden");
-    } else {
-      tokenCard.classList.add("hidden");
-    }
+    if ((isTeacher || isHead) && !token) tokenCard.classList.remove("hidden");
+    else tokenCard.classList.add("hidden");
   }
   const tss = document.getElementById("tokenSharedStatus");
   if (tss) {
@@ -492,7 +485,6 @@ function renderAuth() {
       ? "Токен збереження на цьому телефоні є — можна зберігати дані."
       : "Без токена збереження неможливе. Вставте токен вище (його дає вчитель).";
   }
-
   const ts = document.getElementById("tokenStatus");
   if (ts) {
     ts.textContent = token
@@ -564,25 +556,32 @@ function renderEditor() {
   const conf = document.getElementById("confirmDutyBlock");
   if (conf) {
     const recNow = dayRecord(editDate);
-    const showConf = role === "teacher" && recNow && recNow.duty && dutyStatusOf(recNow) === "assigned";
+    const showConf = role === "teacher" && recNow && recNow.duty;
     conf.classList.toggle("hidden", !showConf);
     if (showConf) {
       const st = studentById(recNow.duty);
       const nameEl = document.getElementById("confirmDutyName");
       const hintEl = document.getElementById("confirmDutyHint");
-      if (nameEl) nameEl.textContent = st ? st.name : ("id " + recNow.duty);
-      let ht = "Підтвердіть, чи учень справді прочергував.";
+      if (nameEl) nameEl.textContent = (st ? st.name : ("id " + recNow.duty)) +
+        " — зараз: " + (dutyStatusLabel(recNow) || "—");
+      let ht = "Можна змінити статус: прочергував або не прочергував.";
       if (editDate === todayStr() && !isAfterConfirmTimeKyiv()) {
-        ht = "Підтвердження доступне після 14:00 за київським часом.";
+        ht = "Зміна статусу доступна після 14:00 за київським часом.";
       } else if (editDate > todayStr()) {
-        ht = "Підтвердження для майбутньої дати недоступне.";
+        ht = "Для майбутньої дати зміна статусу недоступна.";
       }
       if (hintEl) hintEl.textContent = ht;
       const okTime = canConfirmDuty(editDate);
       const b1 = document.getElementById("btnConfirmServed");
       const b2 = document.getElementById("btnConfirmNoshow");
-      if (b1) b1.disabled = !okTime;
-      if (b2) b2.disabled = !okTime;
+      if (b1) {
+        b1.disabled = !okTime;
+        b1.textContent = dutyStatusOf(recNow) === "served" ? "Залишити: прочергував" : "Прочергував";
+      }
+      if (b2) {
+        b2.disabled = !okTime;
+        b2.textContent = dutyStatusOf(recNow) === "noshow" ? "Залишити: не прочергував" : "Не прочергував";
+      }
     }
   }
   if (role === "teacher") renderStudentsManage();
@@ -724,8 +723,6 @@ function openCellModal(sid, date) {
   if (err) err.classList.add("hidden");
   if (title) title.textContent = st ? st.name : ("id " + sid);
   if (sub) sub.textContent = formatDateUk(date);
-  const canConfirm = role === "teacher" && isDuty && dStatus === "assigned" &&
-    (date < todayStr() || (date === todayStr() && isAfterConfirmTimeKyiv()));
   let html = "";
   html += '<label class="row-opt"><input type="radio" name="cellPres" value="present" ' + (!isAbs ? "checked" : "") + '> <span>Присутній</span></label>';
   html += '<label class="row-opt"><input type="radio" name="cellPres" value="absent" ' + (isAbs ? "checked" : "") + '> <span>Не був у школі</span></label>';
@@ -736,12 +733,14 @@ function openCellModal(sid, date) {
   if (isDuty) {
     html += '<p class="muted" style="margin-top:10px">Статус чергування: <strong>' + escapeHtml(dutyStatusLabel(rec) || "—") + "</strong></p>";
   }
-  if (role === "teacher" && isDuty && dStatus === "assigned") {
-    html += '<label class="row-opt"><input type="radio" name="cellConfirm" value="" checked> <span>Не змінювати підтвердження</span></label>';
-    html += '<label class="row-opt"><input type="radio" name="cellConfirm" value="served" ' + (canConfirm ? "" : "disabled") + '> <span>Прочергував</span></label>';
-    html += '<label class="row-opt"><input type="radio" name="cellConfirm" value="noshow" ' + (canConfirm ? "" : "disabled") + '> <span>Не прочергував</span></label>';
-    if (!canConfirm && date === todayStr()) {
-      html += '<p class="muted">Підтвердження доступне після 14:00 (Київ).</p>';
+  if (role === "teacher" && isDuty) {
+    const canCh = canConfirmDuty(date);
+    html += '<p class="muted" style="margin-top:8px"><strong>Змінити статус чергування</strong></p>';
+    html += '<label class="row-opt"><input type="radio" name="cellConfirm" value="" checked> <span>Не змінювати</span></label>';
+    html += '<label class="row-opt"><input type="radio" name="cellConfirm" value="served" ' + (canCh ? "" : "disabled") + '> <span>Прочергував' + (dStatus === "served" ? " (зараз)" : "") + "</span></label>';
+    html += '<label class="row-opt"><input type="radio" name="cellConfirm" value="noshow" ' + (canCh ? "" : "disabled") + '> <span>Не прочергував' + (dStatus === "noshow" ? " (зараз)" : "") + "</span></label>';
+    if (!canCh && date === todayStr()) {
+      html += '<p class="muted">Зміна статусу доступна після 14:00 (Київ).</p>';
     }
   }
   if (role === "head") {
@@ -832,12 +831,16 @@ async function saveCellModal() {
   }
 
   if (confirmVal === "served" || confirmVal === "noshow") {
-    if (!(prev && prev.duty === sid && dutyStatusOf(prev) === "assigned")) {
-      if (err) { err.textContent = "Підтвердити можна лише призначеного (ще не підтвердженого) чергового."; err.classList.remove("hidden"); }
+    if (!(prev && prev.duty === sid)) {
+      if (err) { err.textContent = "Статус можна змінити лише для призначеного чергового цього дня."; err.classList.remove("hidden"); }
       return;
     }
     if (date === todayStr() && !isAfterConfirmTimeKyiv()) {
-      if (err) { err.textContent = "Підтвердження після 14:00 (Київ)."; err.classList.remove("hidden"); }
+      if (err) { err.textContent = "Зміна статусу після 14:00 (Київ)."; err.classList.remove("hidden"); }
+      return;
+    }
+    if (date > todayStr()) {
+      if (err) { err.textContent = "Не можна змінити статус для майбутньої дати."; err.classList.remove("hidden"); }
       return;
     }
     duty = sid;
@@ -929,11 +932,14 @@ async function confirmDutyStatus(date, status) {
   if (role !== "teacher") throw new Error("Лише вчитель підтверджує чергування");
   const rec = dayRecord(date);
   if (!rec || !rec.duty) throw new Error("Немає призначеного чергового");
-  if (dutyStatusOf(rec) !== "assigned") throw new Error("Чергування вже підтверджено");
-  if (date === todayStr() && !isAfterConfirmTimeKyiv()) {
-    throw new Error("Підтвердження можливе після 14:00 (Київ)");
+  if (status !== "served" && status !== "noshow" && status !== "assigned") {
+    throw new Error("Невірний статус");
   }
-  if (status !== "served" && status !== "noshow") throw new Error("Невірний статус");
+  if (date === todayStr() && !isAfterConfirmTimeKyiv()) {
+    throw new Error("Зміна статусу можлива після 14:00 (Київ)");
+  }
+  if (date > todayStr()) throw new Error("Не можна підтвердити майбутню дату");
+  if (dutyStatusOf(rec) === status) return;
   reverseDay(rec);
   const next = {
     absent: (rec.absent || []).slice(),
@@ -945,9 +951,11 @@ async function confirmDutyStatus(date, status) {
   data.days[date] = next;
   applyDay(next);
   try {
-    await saveData(status === "served"
-      ? ("Підтверджено чергування за " + date)
-      : ("Не прочергував за " + date));
+    var msg = "Статус чергування за " + date + ": ";
+    if (status === "served") msg += "прочергував";
+    else if (status === "noshow") msg += "не прочергував";
+    else msg += "призначений";
+    await saveData(msg);
   } catch (e) {
     reverseDay(next);
     data.days[date] = rec;
