@@ -127,27 +127,33 @@ document.getElementById("btnSaveDay").onclick = async function () {
   }
   const absent = getSelectedAbsentIds();
   const autoId = pickDuty(absent);
-  let duty = autoId;
+  let duty = null;
   let by = "auto";
   if (role === "teacher") {
     const sel = document.getElementById("dutySelect");
     const chosen = sel ? sel.value : "";
-    if (chosen) duty = chosen;
-    if (duty && duty !== autoId) by = "teacher";
+    if (chosen && chosen !== "__none__") {
+      duty = chosen;
+      if (duty !== autoId) by = "teacher";
+      else by = "auto";
+    }
+  } else {
+    duty = autoId;
   }
-  if (!duty) {
-    err.textContent = "Немає присутніх учнів для чергування."; err.classList.remove("hidden"); return;
-  }
-  if (absent.indexOf(duty) >= 0) {
+  if (duty && absent.indexOf(duty) >= 0) {
     err.textContent = "Черговий не може бути серед відсутніх."; err.classList.remove("hidden"); return;
   }
   try {
-    await applyAndSaveDay(editDate, absent, duty, by, "Присутність і черговий за " + editDate);
+    await applyAndSaveDay(editDate, absent, duty, by, "Присутність за " + editDate + (duty ? " і черговий" : ""));
     clearDraft();
-    const st = studentById(duty);
-    const star = by === "teacher" ? " *" : "";
-    ok.textContent = "Збережено. Черговий: " + (st ? st.name : duty) + star +
-      " (призначений — підтвердження після 14:00)";
+    if (duty) {
+      const st = studentById(duty);
+      const star = by === "teacher" ? " *" : "";
+      ok.textContent = "Збережено. Черговий: " + (st ? st.name : duty) + star +
+        " (призначений — підтвердження після 14:00)";
+    } else {
+      ok.textContent = "Збережено присутність. Чергового не призначено.";
+    }
     ok.classList.remove("hidden");
     renderAll();
   } catch (e) {
