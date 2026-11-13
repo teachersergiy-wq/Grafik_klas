@@ -313,4 +313,15 @@ if (btnConfirmNoshow) {
   btnConfirmNoshow.onclick = function () { handleConfirmDuty("noshow"); };
 }
 
+var btnCellSave = document.getElementById("btnCellSave");
+var btnCellCancel = document.getElementById("btnCellCancel");
+var cellModal = document.getElementById("cellModal");
+if (btnCellSave) btnCellSave.onclick = function () { saveCellModal(); };
+if (btnCellCancel) btnCellCancel.onclick = function () { closeCellModal(); };
+if (cellModal) {
+  cellModal.addEventListener("click", function (e) {
+    if (e.target === cellModal) closeCellModal();
+  });
+}
+
 loadData();
