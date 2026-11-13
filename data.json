@@ -78,8 +78,10 @@
       "absent": [
         "1793661655272"
       ],
+      "notes": [],
       "duty": "1793661470977",
-      "by": "auto"
+      "by": "teacher",
+      "dutyStatus": "noshow"
     },
     "2026-11-05": {
       "absent": [
