@@ -89,6 +89,25 @@
     [data-theme="color"] table.matrix td.cell-ch-noshow { background: #fecdd3 !important; }
     [data-theme="color"] table.matrix td.cell-n { background: #f1f5f9 !important; }
     .legend { font-size: 0.72rem; color: var(--muted); margin-top: 8px; }
+    table.matrix td.clickable { cursor: pointer; }
+    table.matrix td.clickable:active { opacity: 0.85; }
+    table.matrix .mark-note { font-size: 0.65rem; vertical-align: super; color: #0369a1; }
+    .cell-modal-backdrop {
+      position: fixed; inset: 0; background: rgba(15,23,42,0.45); z-index: 1000;
+      display: flex; align-items: flex-end; justify-content: center; padding: 12px;
+    }
+    .cell-modal {
+      background: var(--card); color: var(--text); border-radius: 16px 16px 12px 12px;
+      padding: 16px; width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto;
+      border: 1px solid var(--border); box-shadow: 0 -4px 24px rgba(0,0,0,.15);
+    }
+    .cell-modal h2 { margin-top: 0; }
+    .cell-modal .row-opt {
+      display: flex; align-items: center; gap: 10px; padding: 12px; margin: 8px 0;
+      border: 2px solid var(--border); border-radius: 10px; background: var(--cell);
+    }
+    .cell-modal .row-opt input { width: 22px; height: 22px; flex-shrink: 0; }
+    .cell-modal .actions { display: flex; flex-direction: column; gap: 0; margin-top: 8px; }
     .student-row { display: flex; align-items: center; gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--border); }
     .student-row:last-child { border-bottom: none; }
     .student-name { flex: 1; }
@@ -167,7 +186,7 @@
         <tbody></tbody>
       </table>
     </div>
-    <p class="legend"><strong>ч</strong> (жовт.) — призначений / прочергував · <strong>ч</strong> (черв.) — не прочергував · <strong>б</strong> — був · <strong>н</strong> — не був · порожньо — немає запису</p>
+    <p class="legend"><strong>ч</strong> (жовт.) — призначений / прочергував · <strong>ч</strong> (черв.) — не прочергував · <strong>б</strong> — був · <strong>н</strong> — не був · <strong>н*</strong> — відсутній, є довідка · порожньо — немає запису</p>
     <button type="button" class="secondary" id="btnJumpToday" style="margin-top:10px">Сьогодні</button>
   </div>
 
@@ -257,6 +276,18 @@
     </div>
   </div>
 
+  <div id="cellModal" class="cell-modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="cell-modal">
+      <h2 id="cellModalTitle">Клітинка</h2>
+      <p class="muted" id="cellModalSub"></p>
+      <div id="cellModalBody"></div>
+      <div class="actions">
+        <button type="button" id="btnCellSave">Зберегти</button>
+        <button type="button" class="secondary" id="btnCellCancel">Скасувати</button>
+      </div>
+      <p class="error hidden" id="cellModalErr"></p>
+    </div>
+  </div>
   <script src="app-core.js"></script>
   <script src="app-ui.js"></script>
 </body>
