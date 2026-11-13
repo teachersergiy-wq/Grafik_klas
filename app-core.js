@@ -739,14 +739,14 @@ function openCellModal(sid, date) {
     html += '<label class="row-opt"><input type="checkbox" id="cellMakeDuty" ' + (isDuty ? "checked" : "") + '> <span>Призначити черговим</span></label>';
   }
   if (isDuty) {
-    html += '<p class="muted" style="margin-top:10px">Статус чергування: <strong>' + escapeHtml(dutyStatusLabel(rec) || "—") + "</strong></p>";
+    html += '<p class="muted" style="margin-top:10px">Статус чергування: <strong>' + escapeHtml(dutyStatusLabel(rec) || "—") + '</strong></p>';
   }
   if (role === "teacher" && isDuty) {
     const canCh = canConfirmDuty(date);
     html += '<p class="muted" style="margin-top:8px"><strong>Змінити статус чергування</strong></p>';
     html += '<label class="row-opt"><input type="radio" name="cellConfirm" value="" checked> <span>Не змінювати</span></label>';
-    html += '<label class="row-opt"><input type="radio" name="cellConfirm" value="served" ' + (canCh ? "" : "disabled") + '> <span>Прочергував' + (dStatus === "served" ? " (зараз)" : "") + "</span></label>';
-    html += '<label class="row-opt"><input type="radio" name="cellConfirm" value="noshow" ' + (canCh ? "" : "disabled") + '> <span>Не прочергував' + (dStatus === "noshow" ? " (зараз)" : "") + "</span></label>';
+    html += '<label class="row-opt"><input type="radio" name="cellConfirm" value="served" ' + (canCh ? "" : "disabled") + '> <span>Прочергував' + (dStatus === "served" ? " (зараз)" : "") + '</span></label>';
+    html += '<label class="row-opt"><input type="radio" name="cellConfirm" value="noshow" ' + (canCh ? "" : "disabled") + '> <span>Не прочергував' + (dStatus === "noshow" ? " (зараз)" : "") + '</span></label>';
     if (!canCh && date === todayStr()) {
       html += '<p class="muted">Зміна статусу доступна після 14:00 (Київ).</p>';
     }
