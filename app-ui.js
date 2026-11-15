@@ -31,24 +31,37 @@ document.getElementById("btnLogout").onclick = function () {
   localStorage.removeItem("gk_login");
   localStorage.removeItem("gk_role");
   loginOpen = false;
-  document.querySelectorAll(".tabs button").forEach(function (b) { b.classList.remove("active"); });
-  const todayTab = document.querySelector('.tabs button[data-tab="today"]');
-  if (todayTab) todayTab.classList.add("active");
-  ["today", "students", "history", "settings"].forEach(function (t) {
+  document.querySelectorAll("#editorTabs button").forEach(function (b) { b.classList.remove("active"); });
+  ["today", "students", "month", "export", "history", "settings"].forEach(function (t) {
     const el = document.getElementById("tab-" + t);
-    if (el) el.classList.toggle("hidden", t !== "today");
+    if (el) el.classList.add("hidden");
   });
   renderAll();
 };
 
-document.querySelectorAll(".tabs button").forEach(function (btn) {
+const EDITOR_TABS = ["today", "students", "month", "export", "history", "settings"];
+function showEditorTab(name) {
+  document.querySelectorAll("#editorTabs button").forEach(function (b) {
+    b.classList.toggle("active", b.getAttribute("data-tab") === name);
+  });
+  EDITOR_TABS.forEach(function (t) {
+    const el = document.getElementById("tab-" + t);
+    if (el) el.classList.toggle("hidden", t !== name);
+  });
+  if (name === "month" && typeof renderMonthFair === "function") renderMonthFair();
+}
+document.querySelectorAll("#editorTabs button").forEach(function (btn) {
   btn.onclick = function () {
-    document.querySelectorAll(".tabs button").forEach(function (b) { b.classList.remove("active"); });
-    btn.classList.add("active");
-    ["today", "students", "history", "settings"].forEach(function (t) {
-      const el = document.getElementById("tab-" + t);
-      if (el) el.classList.toggle("hidden", btn.getAttribute("data-tab") !== t);
-    });
+    const name = btn.getAttribute("data-tab");
+    if (btn.classList.contains("active")) {
+      btn.classList.remove("active");
+      EDITOR_TABS.forEach(function (t) {
+        const el = document.getElementById("tab-" + t);
+        if (el) el.classList.add("hidden");
+      });
+      return;
+    }
+    showEditorTab(name);
   };
 });
 
@@ -242,7 +255,7 @@ document.getElementById("btnLoadDate").onclick = function () {
   const d = document.getElementById("histDate").value;
   if (!d) return;
   editDate = d;
-  document.querySelector('.tabs button[data-tab="today"]').click();
+  showEditorTab("today");
   renderEditor();
   const rec = dayRecord(d);
   const info = document.getElementById("histInfo");
