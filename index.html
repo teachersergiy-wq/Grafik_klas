@@ -125,6 +125,12 @@
     .student-name { flex: 1; }
     .alert-banner { background: color-mix(in srgb, var(--warn) 15%, var(--card)); border: 2px solid var(--warn); border-radius: 12px; padding: 14px; margin-bottom: 12px; }
     .alert-banner strong { display: block; font-size: 1.05rem; color: var(--warn); margin-bottom: 4px; }
+    .alert-banner.soft { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 12%, var(--card)); }
+    .alert-banner.soft strong { color: var(--primary-dark); }
+    .month-row { display: flex; justify-content: space-between; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+    .month-row:last-child { border-bottom: none; }
+    .tomorrow-box { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border); text-align: center; }
+    .day-note-badge { font-size: 0.7rem; margin-left: 4px; }
     .draft-banner { background: color-mix(in srgb, var(--success) 15%, var(--card)); border: 2px solid var(--success); border-radius: 12px; padding: 14px; margin-bottom: 12px; }
     .draft-banner button { margin-top: 10px; }
   </style>
@@ -175,6 +181,11 @@
       <span id="dutyName">—</span>
     </div>
     <p class="muted" id="dutyHint" style="margin-top:8px"></p>
+    <div class="tomorrow-box">
+      <p class="muted" style="margin:0">Ймовірний черговий на завтра</p>
+      <p style="font-weight:700;margin:4px 0 0" id="tomorrowDuty">—</p>
+      <p class="muted" style="font-size:0.8rem;margin-top:4px" id="tomorrowHint">якщо всі будуть присутні</p>
+    </div>
   </div>
 
   <div class="card" id="matrixCard">
@@ -198,8 +209,20 @@
         <tbody></tbody>
       </table>
     </div>
-    <p class="legend"><strong>ч</strong> (жовт.) — призначений / прочергував · <strong>ч</strong> (черв.) — не прочергував · <strong>б</strong> — був · <strong>н</strong> — не був · <strong>н*</strong> — відсутній, є довідка · порожньо — немає запису</p>
+    <p class="legend"><strong>ч</strong> (жовт.) — призначений / прочергував · <strong>ч</strong> (черв.) — не прочергував · <strong>б</strong> — був · <strong>н</strong> — не був · <strong>н*</strong> — відсутній, є довідка · порожньо — немає запису · 📝 — є примітка до дня</p>
     <button type="button" class="secondary" id="btnJumpToday" style="margin-top:10px">Сьогодні</button>
+  </div>
+
+  <div class="card" id="monthFairCard">
+    <h2 style="margin-top:0">Справедливість за місяць</h2>
+    <p class="muted" id="monthFairLabel" style="margin-bottom:8px"></p>
+    <div id="monthFairList"></div>
+  </div>
+
+  <div class="card" id="exportCard">
+    <h2 style="margin-top:0">Звіт</h2>
+    <p class="muted">Список учнів із днями, чергуваннями та відсотками — зручно для зборів.</p>
+    <button type="button" class="secondary" id="btnExportReport">Завантажити звіт</button>
   </div>
 
   <div id="editorSection" class="hidden">
@@ -231,6 +254,8 @@
         <select id="dutySelect"></select>
         <p class="muted" style="margin-top:6px">Можна не призначати чергового. Вручну — біля імені *</p>
       </div>
+      <label>Примітка до дня (необов’язково)</label>
+      <input type="text" id="dayNoteInput" placeholder="Наприклад: екскурсія, карантин…" maxlength="120">
       <button type="button" id="btnSaveDay">Зберегти присутність</button>
       <button type="button" class="secondary hidden" id="btnClearDay">Скасувати запис за день</button>
       <div id="confirmDutyBlock" class="hidden" style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">
