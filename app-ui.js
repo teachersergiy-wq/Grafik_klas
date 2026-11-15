@@ -353,6 +353,18 @@ if (pctModal) {
     if (e.target === pctModal) closePctModal();
   });
 }
+var btnDayNoteSave = document.getElementById("btnDayNoteSave");
+var btnDayNoteClear = document.getElementById("btnDayNoteClear");
+var btnDayNoteClose = document.getElementById("btnDayNoteClose");
+var dayNoteModal = document.getElementById("dayNoteModal");
+if (btnDayNoteSave) btnDayNoteSave.onclick = function () { saveDayNote(false); };
+if (btnDayNoteClear) btnDayNoteClear.onclick = function () { saveDayNote(true); };
+if (btnDayNoteClose) btnDayNoteClose.onclick = function () { closeDayNoteModal(); };
+if (dayNoteModal) {
+  dayNoteModal.addEventListener("click", function (e) {
+    if (e.target === dayNoteModal) closeDayNoteModal();
+  });
+}
 var btnExport = document.getElementById("btnExportReport");
 if (btnExport) {
   btnExport.onclick = function () { downloadReport(); };
