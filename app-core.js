@@ -171,6 +171,96 @@ function pickDuty(absentIds) {
   return present[0].id;
 }
 function dayRecord(date) { return data.days[date] || null; }
+
+function addDaysIso(iso, n) {
+  const p = iso.split("-").map(Number);
+  const d = new Date(p[0], p[1] - 1, p[2], 12, 0, 0);
+  d.setDate(d.getDate() + n);
+  return dateToIsoLocal(d);
+}
+function nextSchoolDayIso(fromIso) {
+  let iso = addDaysIso(fromIso, 1);
+  for (let i = 0; i < 7; i++) {
+    const p = iso.split("-").map(Number);
+    const d = new Date(p[0], p[1] - 1, p[2], 12, 0, 0);
+    const wd = d.getDay();
+    if (wd >= 1 && wd <= 5) return iso;
+    iso = addDaysIso(iso, 1);
+  }
+  return iso;
+}
+function monthKeyKyiv(iso) {
+  return iso.slice(0, 7);
+}
+function currentMonthKey() {
+  return todayStr().slice(0, 7);
+}
+function monthStats(ym) {
+  const map = {};
+  data.students.forEach(function (s) {
+    map[s.id] = { present: 0, duty: 0 };
+  });
+  Object.keys(data.days || {}).forEach(function (date) {
+    if (date.slice(0, 7) !== ym) return;
+    const rec = data.days[date];
+    if (!rec) return;
+    const abs = rec.absent || [];
+    data.students.forEach(function (s) {
+      if (abs.indexOf(s.id) < 0) map[s.id].present += 1;
+      if (rec.duty === s.id && dutyCountsInCh(rec)) map[s.id].duty += 1;
+    });
+  });
+  return map;
+}
+function buildReportText() {
+  const lines = [];
+  const t = todayStr();
+  lines.push("Чергування 8 клас — звіт на " + formatDateUk(t));
+  lines.push("");
+  const sorted = data.students.slice().sort(function (a, b) {
+    return a.name.localeCompare(b.name, "uk");
+  });
+  sorted.forEach(function (s) {
+    const sch = scheduleStats(s.id);
+    const pb = pastB(s), pc = pastCh(s);
+    const tb = pb + sch.b, tc = pc + sch.ch;
+    const pct = (calcPct(s) * 100).toFixed(2);
+    lines.push(s.name);
+    lines.push("  Минулі роки: " + pc + " черг. / " + pb + " дн.");
+    lines.push("  8 клас: " + sch.ch + " черг. / " + sch.b + " дн.");
+    lines.push("  Разом: " + tc + " черг. / " + tb + " дн. (" + pct + "%)");
+    lines.push("");
+  });
+  const ym = currentMonthKey();
+  const ms = monthStats(ym);
+  lines.push("За місяць " + ym + ":");
+  sorted.forEach(function (s) {
+    const m = ms[s.id] || { present: 0, duty: 0 };
+    lines.push("  " + s.name + ": " + m.duty + " черг. / " + m.present + " дн. присутності");
+  });
+  let notes = 0;
+  Object.keys(data.days || {}).forEach(function (date) {
+    const rec = data.days[date];
+    if (rec && rec.notes && rec.notes.length) notes += rec.notes.length;
+  });
+  lines.push("");
+  lines.push("Відсутніх із позначкою довідки (усі дні): " + notes);
+  return lines.join("\n");
+}
+function downloadReport() {
+  const text = buildReportText();
+  const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "zvit-cherhuvannya-" + todayStr() + ".txt";
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(function () {
+    URL.revokeObjectURL(a.href);
+    a.remove();
+  }, 500);
+}
+
 function isManualDuty(rec) {
   return !!(rec && (rec.by === "teacher" || rec.manual === true));
 }
@@ -280,7 +370,9 @@ function renderMatrix() {
   let head = "<tr><th>Учень</th><th>%</th>";
   for (let i = 0; i < 5; i++) {
     const isToday = highlightToday && days[i] === today;
-    head += '<th class="' + (isToday ? "today-col" : "") + '">' + names[i] + "<br>" +
+    const dayRec = dayRecord(days[i]);
+    const noteMark = (dayRec && dayRec.note) ? '<span class="day-note-badge" title="' + escapeHtml(dayRec.note) + '">📝</span>' : "";
+    head += '<th class="' + (isToday ? "today-col" : "") + '">' + names[i] + noteMark + "<br>" +
       days[i].slice(8) + "." + days[i].slice(5, 7) + "</th>";
   }
   head += "</tr>";
@@ -370,6 +462,7 @@ async function quickChangeDuty(date) {
   if (newId === rec.duty) return;
   reverseDay(rec);
   const next = { absent: absent.slice(), duty: newId, by: "teacher", dutyStatus: "assigned", notes: (rec.notes || []).slice() };
+  if (rec.note) next.note = rec.note;
   data.days[date] = next;
   applyDay(next);
   try {
@@ -398,7 +491,9 @@ function renderDuty() {
       const s = studentById(id);
       return s ? s.name : id;
     });
-    hint.textContent = (abs.length ? "Відсутні: " + abs.join(", ") : "Усі присутні") + " · чергового немає";
+    let t2 = (abs.length ? "Відсутні: " + abs.join(", ") : "Усі присутні") + " · чергового немає";
+    if (rec.note) t2 += " · " + rec.note;
+    hint.textContent = t2;
   } else {
     dutyEl.textContent = dutyLabel(rec);
     const abs = (rec.absent || []).map(function (id) {
@@ -409,7 +504,29 @@ function renderDuty() {
     t2 += " · " + dutyRuleText(rec);
     const stl = dutyStatusLabel(rec);
     if (stl) t2 += " · " + stl;
+    if (rec.note) t2 += " · " + rec.note;
     hint.textContent = t2;
+  }
+  const tomEl = document.getElementById("tomorrowDuty");
+  const tomHint = document.getElementById("tomorrowHint");
+  if (tomEl) {
+    const next = nextSchoolDayIso(t);
+    const nextRec = dayRecord(next);
+    if (nextRec && nextRec.duty) {
+      const st = studentById(nextRec.duty);
+      tomEl.textContent = st ? st.name : ("id " + nextRec.duty);
+      if (tomHint) tomHint.textContent = "вже призначено на " + formatDateUk(next);
+    } else {
+      const predicted = pickDuty([]);
+      if (predicted) {
+        const st = studentById(predicted);
+        tomEl.textContent = st ? st.name : predicted;
+        if (tomHint) tomHint.textContent = "за відсотками, якщо всі будуть (на " + formatDateUk(next) + ")";
+      } else {
+        tomEl.textContent = "—";
+        if (tomHint) tomHint.textContent = "немає учнів у списку";
+      }
+    }
   }
 }
 
@@ -424,20 +541,28 @@ function renderLateBanner() {
   }
   const n = kyivNow();
   const mins = n.getHours() * 60 + n.getMinutes();
+  const softStart = 8 * 60;
   const start = 8 * 60 + 30;
   const end = 10 * 60 + 40;
   const t = todayStr();
   const hasDay = !!data.days[t];
-  if (hasDay || mins < start) {
+  if (hasDay || mins < softStart) {
     banner.classList.add("hidden");
+    banner.classList.remove("soft");
     return;
   }
   banner.classList.remove("hidden");
-  if (mins <= end) {
+  if (mins < start) {
+    banner.classList.add("soft");
+    title.textContent = "Нагадування старості";
+    text.textContent = "Можна вже внести відсутніх за сьогодні (вікно до 10:40).";
+  } else if (mins <= end) {
+    banner.classList.remove("soft");
     const late = mins - start;
     title.textContent = "Відсутніх ще не подано";
     text.textContent = "Уже минуло " + late + " хв. від 8:30. Запису за сьогодні ще немає.";
   } else {
+    banner.classList.remove("soft");
     title.textContent = "Запис за сьогодні відсутній";
     text.textContent = "Після 10:40 запис може внести або виправити лише вчитель.";
   }
@@ -632,6 +757,12 @@ function renderEditor() {
   }
   if (role === "teacher") renderStudentsManage();
   document.getElementById("histDate").value = editDate;
+  const noteInput = document.getElementById("dayNoteInput");
+  if (noteInput) {
+    const r0 = dayRecord(editDate);
+    noteInput.value = (r0 && r0.note) ? r0.note : "";
+    noteInput.disabled = !can;
+  }
 }
 
 function getSelectedAbsentIds() {
@@ -952,6 +1083,7 @@ async function saveCellModal() {
       next.by = by || "auto";
       next.dutyStatus = dutyStatus || "assigned";
     }
+    if (prev && prev.note) next.note = prev.note;
     data.days[date] = next;
     applyDay(next);
     await saveData("Оновлено клітинку " + date);
@@ -968,10 +1100,41 @@ async function saveCellModal() {
   }
 }
 
+function renderMonthFair() {
+  const list = document.getElementById("monthFairList");
+  const label = document.getElementById("monthFairLabel");
+  if (!list) return;
+  const ym = currentMonthKey();
+  const parts = ym.split("-");
+  const monthsUk = ["", "січень", "лютий", "березень", "квітень", "травень", "червень",
+    "липень", "серпень", "вересень", "жовтень", "листопад", "грудень"];
+  if (label) {
+    const m = parseInt(parts[1], 10);
+    label.textContent = (monthsUk[m] || ym) + " " + parts[0] + " — чергування лише цього місяця";
+  }
+  if (!data.students.length) {
+    list.innerHTML = "<p class='muted'>Учнів ще немає</p>";
+    return;
+  }
+  const ms = monthStats(ym);
+  const sorted = data.students.slice().sort(function (a, b) {
+    const ma = ms[a.id] || { present: 0, duty: 0 };
+    const mb = ms[b.id] || { present: 0, duty: 0 };
+    if (ma.duty !== mb.duty) return ma.duty - mb.duty;
+    return a.name.localeCompare(b.name, "uk");
+  });
+  list.innerHTML = sorted.map(function (s) {
+    const m = ms[s.id] || { present: 0, duty: 0 };
+    return '<div class="month-row"><span>' + escapeHtml(s.name) + '</span>' +
+      '<span class="muted">' + m.duty + " черг. · " + m.present + " дн.</span></div>";
+  }).join("");
+}
+
 function renderAll() {
   applyTheme();
   renderDuty();
   renderMatrix();
+  renderMonthFair();
   renderLateBanner();
   renderAuth();
   if (role === "teacher" || role === "head") renderEditor();
@@ -982,7 +1145,7 @@ function applyDay(rec) {
 function reverseDay(rec) {
 }
 
-async function applyAndSaveDay(date, absent, duty, by, msg) {
+async function applyAndSaveDay(date, absent, duty, by, msg, note) {
   const prev = dayRecord(date);
   if (prev) reverseDay(prev);
   const prevNotes = prev && prev.notes ? prev.notes.filter(function (id) { return absent.indexOf(id) >= 0; }) : [];
@@ -992,6 +1155,8 @@ async function applyAndSaveDay(date, absent, duty, by, msg) {
     next.by = by || "auto";
     next.dutyStatus = "assigned";
   }
+  const noteText = (note != null ? note : (prev && prev.note) || "").trim();
+  if (noteText) next.note = noteText.slice(0, 120);
   data.days[date] = next;
   applyDay(next);
   try {
@@ -1024,6 +1189,7 @@ async function confirmDutyStatus(date, status) {
     dutyStatus: status,
     notes: (rec.notes || []).slice()
   };
+  if (rec.note) next.note = rec.note;
   data.days[date] = next;
   applyDay(next);
   try {
