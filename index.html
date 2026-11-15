@@ -80,6 +80,8 @@
     table.matrix th, table.matrix td { border: 1px solid var(--border); padding: 6px 4px; text-align: center; overflow: hidden; }
     table.matrix th { background: var(--cell); font-weight: 600; font-size: 0.75rem; color: var(--muted); }
     table.matrix th.today-col { background: var(--today); color: var(--primary-dark); }
+    table.matrix th.day-head-click { cursor: pointer; }
+    table.matrix th.day-head-click:active { opacity: 0.85; }
     table.matrix td.today-col { background: var(--today); }
     table.matrix td.name { text-align: left; padding-left: 8px; font-weight: 500; white-space: nowrap; max-width: 110px; overflow: hidden; text-overflow: ellipsis; }
     table.matrix td.pct { color: var(--primary-dark); font-weight: 600; min-width: 48px; font-size: 0.72rem; }
@@ -213,7 +215,7 @@
         <tbody></tbody>
       </table>
     </div>
-    <p class="legend"><strong>ч</strong> (жовт.) — призначений / прочергував · <strong>ч</strong> (черв.) — не прочергував · <strong>б</strong> — був · <strong>н</strong> — не був · <strong>н*</strong> — відсутній, є довідка · порожньо — немає запису · 📝 — є примітка до дня</p>
+    <p class="legend"><strong>ч</strong> (жовт.) — призначений / прочергував · <strong>ч</strong> (черв.) — не прочергував · <strong>б</strong> — був · <strong>н</strong> — не був · <strong>н*</strong> — відсутній, є довідка · порожньо — немає запису · 📝 — є примітка (натисніть на дату)</p>
     <button type="button" class="secondary" id="btnJumpToday" style="margin-top:10px">Сьогодні</button>
   </div>
 
@@ -319,6 +321,21 @@
     </div>
   </div>
 
+  <div id="dayNoteModal" class="cell-modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="cell-modal">
+      <h2 id="dayNoteModalTitle">Примітка до дня</h2>
+      <p class="muted" id="dayNoteModalSub"></p>
+      <label>Текст примітки</label>
+      <input type="text" id="dayNoteModalInput" maxlength="120" placeholder="Наприклад: екскурсія, карантин…">
+      <p class="muted" id="dayNoteModalHint" style="margin-top:8px"></p>
+      <div class="actions">
+        <button type="button" id="btnDayNoteSave">Зберегти</button>
+        <button type="button" class="secondary" id="btnDayNoteClear">Очистити</button>
+        <button type="button" class="secondary" id="btnDayNoteClose">Закрити</button>
+      </div>
+      <p class="error hidden" id="dayNoteModalErr"></p>
+    </div>
+  </div>
   <div id="pctModal" class="cell-modal-backdrop hidden" role="dialog" aria-modal="true">
     <div class="cell-modal">
       <h2 id="pctModalTitle">Відсоток</h2>
