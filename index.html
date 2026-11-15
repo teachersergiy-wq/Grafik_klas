@@ -53,8 +53,12 @@
     .error { color: var(--danger); margin-top: 8px; }
     .ok { color: var(--success); margin-top: 8px; }
     .tabs { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
-    .tabs button { flex: 1; min-width: 70px; margin-top: 0; background: var(--border); color: var(--text); }
+    .tabs button { flex: 1; min-width: 48px; margin-top: 0; background: var(--border); color: var(--text); font-size: 0.8rem; padding: 8px 6px; min-height: 48px; }
     .tabs button.active { background: var(--primary); color: #fff; }
+    .tabs .tab-ico { display: block; font-size: 1.15rem; line-height: 1.2; }
+    .tabs .tab-lbl { display: block; font-size: 0.68rem; font-weight: 600; margin-top: 2px; }
+    #editorSection { margin-top: 4px; }
+    #editorPanels .card { margin-top: 0; }
     footer { text-align: center; margin-top: 24px; color: var(--muted); font-size: 0.8rem; }
     .hint-box { background: var(--today); border: 1px solid var(--border); border-radius: 10px; padding: 12px; margin-top: 12px; font-size: 0.9rem; }
     .absent-row { display: flex; align-items: center; gap: 12px; padding: 12px; margin: 8px 0; border-radius: 10px; border: 2px solid var(--border); background: var(--cell); }
@@ -213,18 +217,6 @@
     <button type="button" class="secondary" id="btnJumpToday" style="margin-top:10px">Сьогодні</button>
   </div>
 
-  <div class="card" id="monthFairCard">
-    <h2 style="margin-top:0">Справедливість за місяць</h2>
-    <p class="muted" id="monthFairLabel" style="margin-bottom:8px"></p>
-    <div id="monthFairList"></div>
-  </div>
-
-  <div class="card" id="exportCard">
-    <h2 style="margin-top:0">Звіт</h2>
-    <p class="muted">Список учнів із днями, чергуваннями та відсотками — зручно для зборів.</p>
-    <button type="button" class="secondary" id="btnExportReport">Завантажити звіт</button>
-  </div>
-
   <div id="editorSection" class="hidden">
     <div id="tokenSetupCard" class="card hidden">
       <h2>Токен для збереження</h2>
@@ -236,13 +228,16 @@
       <p class="error hidden" id="tokenSharedErr"></p>
       <p class="muted" id="tokenSharedStatus" style="margin-top:8px"></p>
     </div>
-    <div class="tabs">
-      <button type="button" class="active" data-tab="today">Сьогодні</button>
-      <button type="button" data-tab="students" id="tabStudentsBtn">Учні</button>
-      <button type="button" data-tab="history" id="tabHistoryBtn">Історія</button>
-      <button type="button" data-tab="settings" id="tabSettingsBtn">Налашт.</button>
+    <div class="tabs" id="editorTabs">
+      <button type="button" data-tab="today" id="tabTodayBtn"><span class="tab-ico">✏️</span><span class="tab-lbl">Присутність</span></button>
+      <button type="button" data-tab="students" id="tabStudentsBtn"><span class="tab-ico">👥</span><span class="tab-lbl">Учні</span></button>
+      <button type="button" data-tab="month" id="tabMonthBtn"><span class="tab-ico">⚖️</span><span class="tab-lbl">Місяць</span></button>
+      <button type="button" data-tab="export" id="tabExportBtn"><span class="tab-ico">📄</span><span class="tab-lbl">Звіт</span></button>
+      <button type="button" data-tab="history" id="tabHistoryBtn"><span class="tab-ico">📅</span><span class="tab-lbl">Історія</span></button>
+      <button type="button" data-tab="settings" id="tabSettingsBtn"><span class="tab-ico">⚙️</span><span class="tab-lbl">Налашт.</span></button>
     </div>
-    <div id="tab-today" class="card">
+    <div id="editorPanels">
+    <div id="tab-today" class="card hidden">
       <h2>Присутність на <span id="editDateLabel"></span></h2>
       <p class="muted" id="timeWindowHint"></p>
       <div class="hint-box">Поставте галочку біля учня, якщо він <strong>відсутній</strong>. Без галочки — присутній.</div>
@@ -286,6 +281,16 @@
         <p class="error hidden" id="studError"></p>
       </div>
     </div>
+    <div id="tab-month" class="card hidden">
+      <h2>Справедливість за місяць</h2>
+      <p class="muted" id="monthFairLabel" style="margin-bottom:8px"></p>
+      <div id="monthFairList"></div>
+    </div>
+    <div id="tab-export" class="card hidden">
+      <h2>Звіт</h2>
+      <p class="muted">Список учнів із днями, чергуваннями та відсотками — зручно для зборів.</p>
+      <button type="button" class="secondary" id="btnExportReport">Завантажити звіт</button>
+    </div>
     <div id="tab-history" class="card hidden">
       <h2>Історія / інша дата</h2>
       <label>Дата</label>
@@ -310,6 +315,7 @@
       <button type="button" id="btnSavePasswords">Змінити паролі</button>
       <p class="ok hidden" id="passOk"></p>
       <p class="error hidden" id="passErr"></p>
+    </div>
     </div>
   </div>
 
