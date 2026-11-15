@@ -1,8 +1,8 @@
 (async function(){
   try {
     const parts = [];
-    for (let i = 0; i < 3; i++) {
-      const r = await fetch("p" + i + ".txt?t=" + Date.now());
+    for (let i = 0; i < 6; i++) {
+      const r = await fetch("q" + i + ".txt?t=" + Date.now());
       if (!r.ok) throw new Error("part " + i + " " + r.status);
       parts.push(await r.text());
     }
@@ -16,7 +16,7 @@
   } catch (e) {
     console.error(e);
     document.body.insertAdjacentHTML("afterbegin",
-      "<div style=\"padding:16px;background:#fee;color:#900;font-family:sans-serif\">Помилка завантаження логіки: " +
+      "<div style=\"padding:16px;background:#fee;color:#900;font-family:sans-serif\">Помилка завантаження: " +
       String(e.message || e) + "</div>");
   }
 })();
