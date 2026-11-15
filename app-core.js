@@ -1,16 +1,17 @@
 (async function(){
   try {
-    const parts = [];
-    for (let i = 0; i < 4; i++) {
-      const r = await fetch("m" + i + ".js.txt?t=" + Date.now());
-      if (!r.ok) throw new Error("part " + i + " " + r.status);
-      parts.push(await r.text());
+    for (const name of ["half1.js", "half2.js"]) {
+      const r = await fetch(name + "?t=" + Date.now());
+      if (!r.ok) throw new Error(name + " " + r.status);
+      const text = await r.text();
+      const s = document.createElement("script");
+      s.text = text;
+      document.head.appendChild(s);
     }
-    const s = document.createElement("script");
-    s.text = parts.join("");
-    document.head.appendChild(s);
   } catch (e) {
     console.error(e);
-    document.body.insertAdjacentHTML("afterbegin","<div style=\"padding:16px;background:#fee;color:#900\">Помилка: "+String(e.message||e)+"</div>");
+    document.body.insertAdjacentHTML("afterbegin",
+      "<div style=\"padding:16px;background:#fee;color:#900;font-family:sans-serif\">Помилка: " +
+      String(e.message || e) + "</div>");
   }
 })();
