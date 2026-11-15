@@ -143,8 +143,10 @@ document.getElementById("btnSaveDay").onclick = async function () {
   if (duty && absent.indexOf(duty) >= 0) {
     err.textContent = "Черговий не може бути серед відсутніх."; err.classList.remove("hidden"); return;
   }
+  const noteEl = document.getElementById("dayNoteInput");
+  const note = noteEl ? noteEl.value : "";
   try {
-    await applyAndSaveDay(editDate, absent, duty, by, "Присутність за " + editDate + (duty ? " і черговий" : ""));
+    await applyAndSaveDay(editDate, absent, duty, by, "Присутність за " + editDate + (duty ? " і черговий" : ""), note);
     clearDraft();
     if (duty) {
       const st = studentById(duty);
@@ -259,6 +261,7 @@ document.getElementById("btnLoadDate").onclick = function () {
       "<p>Черговий: <strong>" + escapeHtml(dutyLabel(rec)) + "</strong></p>" +
       "<p class=\"muted\">Правило: " + escapeHtml(dutyRuleText(rec)) + "</p>" +
       "<p class=\"muted\">Статус: " + escapeHtml(dutyStatusLabel(rec)) + "</p>" +
+      (rec.note ? ("<p class=\"muted\">Примітка: " + escapeHtml(rec.note) + "</p>") : "") +
       "<p style=\"margin-top:8px\"><strong>Відсутні:</strong> " + escapeHtml(absentNames.join(", ") || "—") + "</p>" +
       "<p><strong>Присутні:</strong> " + escapeHtml(presentNames.join(", ") || "—") + "</p>";
   }
@@ -336,6 +339,10 @@ if (pctModal) {
   pctModal.addEventListener("click", function (e) {
     if (e.target === pctModal) closePctModal();
   });
+}
+var btnExport = document.getElementById("btnExportReport");
+if (btnExport) {
+  btnExport.onclick = function () { downloadReport(); };
 }
 
 loadData();
