@@ -56,7 +56,7 @@
       html += '<p class="muted">Прочергував: <strong style="color:var(--text)">' + a.dutyServed + "</strong></p>";
       html += '<p class="muted">Не виконав обов\'язки: <strong style="color:var(--text)">' + a.dutyNoshow + "</strong></p>";
       html += '<p class="muted" style="margin-bottom:12px">Призначений (ще без підтвердження): <strong style="color:var(--text)">' + a.dutyAssigned + "</strong></p>";
-      html += '<p class="muted" style="font-size:0.85rem">Натисніть на відсоток — деталі розрахунку ч/д.</p>';
+      html += '<p class="muted" style="font-size:0.85rem">Натисніть на відсоток — деталі розрахунку відсотка чергувань (відношення чергувань до кількості днів присутності в школі).</p>';
       body.innerHTML = html;
     }
     const m = document.getElementById("pctModal");
