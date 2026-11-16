@@ -109,6 +109,44 @@
     return lines.join("");
   };
 
+  // Clearer main-screen hint: * refers to duty, not absences
+  const _renderDuty = window.renderDuty;
+  if (typeof _renderDuty === "function") {
+    window.renderDuty = function () {
+      _renderDuty();
+      const t = todayStr();
+      const rec = dayRecord(t);
+      const hint = document.getElementById("dutyHint");
+      if (!hint) return;
+      if (!rec) {
+        hint.textContent = "Черговий з’явиться після збереження присутності за сьогодні (за бажанням).";
+        return;
+      }
+      const abs = (rec.absent || []).map(function (id) {
+        const s = studentById(id);
+        return s ? s.name : id;
+      });
+      const absPart = abs.length ? ("Відсутні: " + abs.join(", ") + ".") : "Усі присутні.";
+      if (!rec.duty) {
+        let t2 = absPart + " Чергового сьогодні немає.";
+        if (rec.note) t2 += " Примітка: " + rec.note;
+        hint.textContent = t2;
+        return;
+      }
+      let dutyHow = "";
+      if (isManualDuty(rec)) {
+        dutyHow = "Чергового призначив учитель (позначка * біля імені).";
+      } else {
+        dutyHow = "Чергового обрано за відсотковим розрахунком.";
+      }
+      const stl = dutyStatusLabel(rec);
+      let t2 = absPart + " " + dutyHow;
+      if (stl) t2 += " Статус: " + stl + ".";
+      if (rec.note) t2 += " Примітка: " + rec.note;
+      hint.textContent = t2;
+    };
+  }
+
   const _openCellModal = window.openCellModal;
   window.openCellModal = function (sid, date) {
     const st = studentById(sid);
