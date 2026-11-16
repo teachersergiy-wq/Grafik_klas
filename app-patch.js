@@ -66,12 +66,7 @@
   window.describeCellDay = function (sid, date) {
     const st = studentById(sid);
     const rec = dayRecord(date);
-    const name = st ? st.name : sid;
-    const dayName = weekdayUk(date);
-    const dateUk = formatDateUk(date);
     let lines = [];
-    lines.push("<p><strong>" + escapeHtml(name) + "</strong></p>");
-    lines.push('<p class="muted">' + escapeHtml(dayName) + ", " + escapeHtml(dateUk) + "</p>");
     if (!rec) {
       lines.push("<p>За цей день запису ще немає.</p>");
       return lines.join("");
