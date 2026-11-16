@@ -11,6 +11,20 @@
     };
   }
 
+  const _canEditDay = window.canEditDay;
+  if (typeof _canEditDay === "function") {
+    window.canEditDay = function (date) {
+      if (role === "teacher") return true;
+      if (role !== "head") return false;
+      if (date !== todayStr()) return false;
+      if (!isHeadTimeWindow()) return false;
+      const rec = dayRecord(date);
+      if (!rec) return true;
+      if (!rec.duty) return true;
+      return false;
+    };
+  }
+
   const _renderAuth = window.renderAuth;
   if (typeof _renderAuth === "function") {
     window.renderAuth = function () {
@@ -29,6 +43,76 @@
       if (tabSettings) tabSettings.classList.toggle("hidden", !isTeacher);
       if (tabMonth) tabMonth.classList.toggle("hidden", !(isTeacher || isHead));
       if (tabExport) tabExport.classList.toggle("hidden", !isTeacher);
+    };
+  }
+
+  const _renderEditor = window.renderEditor;
+  if (typeof _renderEditor === "function") {
+    window.renderEditor = function () {
+      _renderEditor();
+      const btn = document.getElementById("btnSaveDay");
+      const hint = document.getElementById("timeWindowHint");
+      const can = canEditDay(editDate);
+
+      var autoBox = document.getElementById("starostaDutyPreview");
+      if (!autoBox) {
+        autoBox = document.createElement("div");
+        autoBox.id = "starostaDutyPreview";
+        autoBox.className = "hint-box";
+        autoBox.style.marginTop = "12px";
+        const list = document.getElementById("absentList");
+        if (list && list.parentNode) {
+          list.parentNode.insertBefore(autoBox, list.nextSibling);
+        }
+      }
+
+      if (role === "head") {
+        if (btn) btn.textContent = "Зберегти присутність і призначити чергового";
+        const absent = typeof getSelectedAbsentIds === "function" ? getSelectedAbsentIds() : [];
+        const autoId = typeof pickDuty === "function" ? pickDuty(absent) : null;
+        const st = autoId && typeof studentById === "function" ? studentById(autoId) : null;
+        const rec = dayRecord(editDate);
+        if (rec && rec.duty) {
+          const dSt = studentById(rec.duty);
+          autoBox.classList.remove("hidden");
+          autoBox.innerHTML = "Сьогодні вже збережено. Черговий: <strong>" +
+            escapeHtml(dSt ? dSt.name : rec.duty) + "</strong>" +
+            (rec.by === "teacher" ? " (призначив вчитель)" : " (за графіком)") +
+            ". Змінювати може лише вчитель.";
+        } else if (st) {
+          autoBox.classList.remove("hidden");
+          autoBox.innerHTML = "Після збереження черговим буде: <strong>" +
+            escapeHtml(st.name) + "</strong> (автоматично за найменшим відсотком серед присутніх).";
+        } else {
+          autoBox.classList.remove("hidden");
+          autoBox.innerHTML = "Немає присутніх — чергового призначити не можна. Залиште хоча б одного присутнім.";
+        }
+        document.querySelectorAll("#absentList input[type=checkbox]").forEach(function (cb) {
+          cb.addEventListener("change", function () {
+            const box = document.getElementById("starostaDutyPreview");
+            if (!box || role !== "head") return;
+            const rec2 = dayRecord(editDate);
+            if (rec2 && rec2.duty) return;
+            const abs = getSelectedAbsentIds();
+            const id = pickDuty(abs);
+            const s = id ? studentById(id) : null;
+            if (s) {
+              box.innerHTML = "Після збереження черговим буде: <strong>" +
+                escapeHtml(s.name) + "</strong> (автоматично за найменшим відсотком серед присутніх).";
+            } else {
+              box.innerHTML = "Немає присутніх — чергового призначити не можна.";
+            }
+          });
+        });
+        if (hint && can && !dayRecord(editDate)) {
+          hint.textContent = "Можна зберегти один раз за сьогодні. Черговий призначиться автоматично.";
+        } else if (hint && can && dayRecord(editDate) && !dayRecord(editDate).duty) {
+          hint.textContent = "Присутність є, але чергового ще немає — збережіть, щоб призначити.";
+        }
+      } else {
+        if (btn) btn.textContent = "Зберегти присутність";
+        if (autoBox) autoBox.classList.add("hidden");
+      }
     };
   }
 
