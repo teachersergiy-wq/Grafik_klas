@@ -281,11 +281,11 @@ document.getElementById("btnLoadDate").onclick = function () {
 };
 
 setInterval(function () {
-  renderLateBanner();
-  renderDraftBanner();
+  if (typeof renderLateBanner === "function") renderLateBanner();
+  if (typeof renderDraftBanner === "function") renderDraftBanner();
 }, 60000);
 
-window.addEventListener("online", function () { trySendDraft(); });
+window.addEventListener("online", function () { if (typeof trySendDraft === "function") trySendDraft(); });
 
 var btnTheme = document.getElementById("btnTheme");
 if (btnTheme) {
@@ -370,4 +370,10 @@ if (btnExport) {
   btnExport.onclick = function () { downloadReport(); };
 }
 
-loadData();
+(function waitCore() {
+  if (typeof loadData === "function" && typeof renderAll === "function") {
+    loadData();
+    return;
+  }
+  setTimeout(waitCore, 40);
+})();
