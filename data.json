@@ -392,7 +392,10 @@
       "absent": [
         "1793661621417"
       ],
-      "notes": []
+      "notes": [],
+      "duty": "1793661522184",
+      "by": "auto",
+      "dutyStatus": "assigned"
     }
   },
   "passwords": {
