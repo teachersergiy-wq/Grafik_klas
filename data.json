@@ -416,6 +416,11 @@
       "by": "teacher",
       "dutyStatus": "assigned",
       "note": "скорочені уроки"
+    },
+    "2026-11-19": {
+      "absent": [],
+      "notes": [],
+      "note": "скорочені уроки"
     }
   },
   "passwords": {
