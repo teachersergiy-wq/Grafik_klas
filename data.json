@@ -71,8 +71,10 @@
         "1793661655272",
         "1793661685424"
       ],
+      "notes": [],
       "duty": "1793661552424",
-      "by": "teacher"
+      "by": "teacher",
+      "dutyStatus": "served"
     },
     "2026-11-04": {
       "absent": [
