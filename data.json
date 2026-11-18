@@ -411,7 +411,10 @@
         "1793661621417",
         "1793661655272"
       ],
-      "notes": []
+      "notes": [],
+      "duty": "1793661685424",
+      "by": "teacher",
+      "dutyStatus": "assigned"
     }
   },
   "passwords": {
