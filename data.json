@@ -437,6 +437,12 @@
       "by": "teacher",
       "dutyStatus": "noshow",
       "note": "скорочені уроки"
+    },
+    "2026-11-20": {
+      "absent": [
+        "1793661552424"
+      ],
+      "notes": []
     }
   },
   "passwords": {
